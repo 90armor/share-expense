@@ -1,0 +1,9 @@
+node_modules
+.next
+coverage
+prisma/dev.db
+src/generated
+/README.md
+docs/prompts/
+package-lock.json
+/AGENTS.md
