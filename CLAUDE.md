@@ -23,6 +23,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
 - `npm run test` — Vitest unit tests (smoke test only for now)
+- `docker compose up --build` / `down` / `run --rm app npm run <cmd>` — Docker dev workflow (build & run, stop, run lint/typecheck/test in container)
 
 ## Naming & Structure Conventions
 

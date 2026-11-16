@@ -1,0 +1,10 @@
+.env
+.env.*
+node_modules
+.next
+.git
+data
+*.db
+*.db-journal
+src/generated
+docs
