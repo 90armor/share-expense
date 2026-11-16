@@ -26,6 +26,7 @@ coverage/
 # Database
 *.db
 *.db-journal
+data/
 
 # Next.js generated
 next-env.d.ts
