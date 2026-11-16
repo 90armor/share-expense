@@ -34,4 +34,4 @@ Share Expense ဟာ group ထဲက အသုံးစရိတ်တွေက�
 - [x] CLAUDE.md — AI assistant working rules
 - [x] .gitignore — Node/Next.js baseline
 - [x] .claude/settings.json — permission guardrails (.env deny, read-only git allow)
-- [x] Phase 1 — Next.js + TypeScript scaffold, Prisma + SQLite, Tailwind, Vitest, Playwright, ESLint/Prettier, GitHub Actions CI
+- [x] Phase 1 — Next.js + TypeScript scaffold, Prisma + SQLite, Tailwind, Vitest, ESLint/Prettier, GitHub Actions CI
