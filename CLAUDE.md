@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 ## Project
 
 Share Expense — group အသုံးစရိတ် မျှဝေမှု balance တွက်ပေးတဲ့ practice project။ Scope နဲ့ MVP feature list အတွက် README.md ကိုကြည့်ပါ (feature ၅ ခုပဲ — ဒီထက်မပိုရ)။
@@ -15,11 +17,20 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Commands
 
-_Phase 1 မှာ ဖြည့်မယ်။_
+- `npm run dev` — Next.js local dev server
+- `npm run lint` — ESLint check
+- `npm run format` — Prettier write
+- `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
+- `npm run build` — production build
+- `npm run test` — Vitest unit tests (smoke test only for now)
 
 ## Naming & Structure Conventions
 
-_Phase 1 မှာ ဖြည့်မယ်။_
+- `src/app` — Next.js App Router routes
+- `src/components` — shared UI components, PascalCase filenames
+- `src/lib` — shared utilities, camelCase filenames
+- `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
+- `prisma/schema.prisma` — Prisma schema (SQLite datasource only for now, no models)
 
 ## Git Workflow
 
