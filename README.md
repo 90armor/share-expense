@@ -17,7 +17,7 @@ Share Expense ဟာ group ထဲက အသုံးစရိတ်တွေက�
 ## Git Workflow
 
 - `main` ပေါ်မှာ **တိုက်ရိုက် commit/push လုပ်ခွင့်မရှိပါ**။
-- အလုပ်တိုင်းကို branch အသစ်ဆောက်ပြီး PR ဖြင့်သာ `main` ထဲ merge လုပ်ပါ (`feature/...`, `fix/...`, `chore/...`)။
+- အလုပ်တိုင်းကို branch အသစ်ဆောက်ပြီး PR ဖြင့်သာ `main` ထဲ merge လုပ်ပါ (`feat/...`, `fix/...`, `chore/...`)။
 - Merge မလုပ်မီ review လိုအပ်ပါတယ်။
 
 ## Phase 0 Checklist

@@ -24,20 +24,22 @@ _Phase 1 မှာ ဖြည့်မယ်။_
 ## Git Workflow
 
 - `main` ကို တိုက်ရိုက် push/commit မလုပ်ရ။
-- Branch ဆောက်ပြီး PR ဖြင့်သာ merge လုပ်ရမယ်။
-- Commit message တိုတို ရှင်းလင်းစွာ ရေးပါ။
+- Branch ဆောက်ပြီး PR ဖြင့်သာ merge လုပ်ရမယ် — branch prefix: `feat/` | `fix/` | `chore/`။
+- Feature/fix တစ်ခု = branch တစ်ခု = PR တစ်ခု၊ PR ကို သေးသေးထားပါ။
+- Commit message prefix: `feat:` / `fix:` / `chore:`၊ တိုတို ရှင်းလင်းစွာ ရေးပါ။
 
 ## Working Rules
 
 - Code ရေး/ပြင်ခင်း plan ကို အရင်ပြပြီး user OK မှ စလုပ်ပါ။
 - အသစ်မရေးခင်း existing code/utility ရှိ/မရှိ အရင်ရှာပါ။
-- Feature/fix အသစ်တိုင်းမှာ test ပါရမယ်။
-- Test fail ရင် root cause ကိုရှာဖြေရှင်းပါ — test ကိုပြင်ပြီး force pass မလုပ်ပါနဲ့။
+- Feature/fix အသစ်တိုင်းမှာ test ပါရမယ်။ Bug fix ဖြစ်ရင် test အရင်ရေးပြီး fail ပြပြီးမှ ပြင်ပါ။
+- Test fail ရင် root cause ကိုရှာဖြေရှင်းပါ — test ကိုပြင်ပြီး force pass မလုပ်ပါနဲ့။ Test file ကိုပြင်ရင် ဘာကြောင့်ပြင်လဲ ရှင်းပြပါ။
 - တောင်းထားတာထက် ပိုမလုပ်ပါနဲ့ (over-engineering, unnecessary refactor, speculative feature မလုပ်ပါ)။
+- ခွင့်ပြုထားတဲ့ phase မှာပဲ stack install/scaffold လုပ်ပါ။
 - မသေချာတာရှိရင် မှန်းဆမလုပ်ဘဲ မေးပါ။
 
 ## Absolute Don'ts
 
 - `.env` / `.env.*` ဖိုင်များကို ဖတ်/ဖွင့်မည်မဟုတ်ပါ။
-- `git push --force` (သို့) destructive git command များကို user ရှင်းလင်းစွာ ခွင့်ပြုမှသာ အသုံးပြုမည်။
+- `main` ကို တိုက်ရိုက် push မလုပ်ရ။ `git push --force`, `rm -rf`, destructive git command များကို လုံးဝမလုပ်ရ။
 - User မတောင်းထားသော dependency/package ကို ထည့်မည်မဟုတ်ပါ။
