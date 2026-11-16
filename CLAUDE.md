@@ -19,7 +19,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 - `npm run dev` — Next.js local dev server
 - `npm run lint` — ESLint check
-- `npm run format` — Prettier write
+- `npm run format` / `format:check` — Prettier write / check (CI runs format:check)
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
 - `npm run test` — Vitest unit tests (smoke test only for now)
