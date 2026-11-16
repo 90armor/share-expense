@@ -52,6 +52,6 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Absolute Don'ts
 
-- `.env` / `.env.*` ဖိုင်များကို ဖတ်/ဖွင့်မည်မဟုတ်ပါ။
+- `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test` (secret ဖိုင်များ) ကို ဖတ်/ဖွင့်မည်မဟုတ်ပါ — `.env.example` ကိုတော့ ဖတ်/ပြင်နိုင်ပါတယ်။
 - `main` ကို တိုက်ရိုက် push မလုပ်ရ။ `git push --force`, `rm -rf`, destructive git command များကို လုံးဝမလုပ်ရ။
 - User မတောင်းထားသော dependency/package ကို ထည့်မည်မဟုတ်ပါ။
