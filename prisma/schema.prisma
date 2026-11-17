@@ -13,7 +13,7 @@ datasource db {
 }
 
 model Group {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid(4))
   name      String
   currency  String
   createdAt DateTime @default(now())

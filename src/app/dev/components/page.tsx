@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { RadioGroup } from "@/components/RadioGroup";
 import { Table } from "@/components/Table";
+import { CURRENCY_CODES } from "@/lib/currency";
 import { formatMoney, type Money } from "@/lib/money";
 import { ModalDemo } from "./ModalDemo";
 
@@ -34,6 +36,11 @@ const swatches = [
   ["danger-subtle", "bg-danger-subtle"],
   ["focus", "bg-focus"],
 ] as const;
+
+const currencyOptions = CURRENCY_CODES.map((code) => ({
+  value: code,
+  label: code,
+}));
 
 // Sample amounts go through the shared formatter so this page cannot drift from it.
 const youOwe: Money = { amount: 1_200_000n, currency: "MMK" };
@@ -120,6 +127,31 @@ export default function ComponentsPage() {
             error="Name is required."
           />
           <Input label="Currency" defaultValue="MMK" disabled />
+        </div>
+      </Section>
+
+      <Section title="RadioGroup">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <RadioGroup
+            label="Currency"
+            name="demo-currency"
+            options={currencyOptions}
+            defaultValue="MMK"
+            hint="All amounts in this group use this currency."
+          />
+          <RadioGroup
+            label="Currency"
+            name="demo-currency-error"
+            options={currencyOptions}
+            error="Unsupported currency"
+          />
+          <RadioGroup
+            label="Currency"
+            name="demo-currency-disabled"
+            options={currencyOptions}
+            defaultValue="USD"
+            disabled
+          />
         </div>
       </Section>
 

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { idSchema, parseWith } from "@/lib/validation";
 import { createTestDb, type TestDb } from "./testDb";
 
 describe("database (temp SQLite with migrations applied)", () => {
@@ -37,6 +38,17 @@ describe("database (temp SQLite with migrations applied)", () => {
     expect(found?.createdAt).toBeInstanceOf(Date);
     expect(found!.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
     expect(found!.createdAt.getTime()).toBeLessThanOrEqual(after.getTime());
+  });
+
+  it("generates ids (Prisma's uuid(4) default) that pass idSchema", async () => {
+    const created = await testDb.db.group.create({
+      data: { name: "Trip", currency: "MMK" },
+    });
+
+    expect(parseWith(idSchema, created.id)).toEqual({
+      ok: true,
+      value: created.id,
+    });
   });
 
   it("gives two Groups different ids", async () => {
