@@ -31,6 +31,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `src/components` — shared UI components, PascalCase filenames
 - `src/lib` — shared utilities, camelCase filenames
 - Check `src/lib/README.md` before writing a helper — reuse what exists.
+- UI: tokens + src/components only, no raw colors (docs/DESIGN_SYSTEM.md); preview at /dev/components (dev only).
 - `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
 - `prisma/schema.prisma` — Prisma schema (SQLite datasource only for now, no models)
 

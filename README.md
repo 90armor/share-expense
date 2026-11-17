@@ -28,6 +28,10 @@ Share Expense ဟာ group ထဲက အသုံးစရိတ်တွေက�
 - `DATABASE_URL` ကို `docker-compose.yml` ရဲ့ `environment:` ထဲမှာ တိုက်ရိုက်သတ်မှတ်ထားပါတယ် (`.env` ကို container ထဲ bind mount ကတစ်ဆင့်မြင်ရပေမယ့် `environment:` တန်ဖိုးက ဦးစားပေးပါတယ်)
 - `package.json` ပြောင်းရင် `docker compose down -v && docker compose up --build` ပြန်run ပါ (node_modules volume ပြန် rebuild ဖို့)
 
+## Troubleshooting
+
+- Observed once (cause unconfirmed): after editing `src/app/globals.css`, `next dev` and `next build` kept serving the old stylesheet until `.next/cache/turbopack` (dev: `.next/dev/cache/turbopack`) was moved aside and the app rebuilt.
+
 ## Phase 0 Checklist
 
 - [x] README.md — project scope + git rules
