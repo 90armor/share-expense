@@ -8,7 +8,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Intended Stack (Phase 1 မှာ scaffold လုပ်မယ်)
 
-- Next.js + TypeScript
+- Next.js + TypeScript + zod (validation)
 - SQLite + Prisma
 - Tailwind CSS
 - Vitest (unit), Playwright (e2e)
@@ -22,7 +22,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `npm run format` / `format:check` — Prettier write / check (CI runs format:check)
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
-- `npm run test` — Vitest unit tests (smoke test only for now)
+- `npm run test` — Vitest unit tests (`src/**/*.test.ts`, next to the code they cover)
 - `docker compose up --build` / `down` / `run --rm app npm run <cmd>` — Docker dev workflow (build & run, stop, run lint/typecheck/test in container)
 
 ## Naming & Structure Conventions
@@ -30,6 +30,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `src/app` — Next.js App Router routes
 - `src/components` — shared UI components, PascalCase filenames
 - `src/lib` — shared utilities, camelCase filenames
+- Check `src/lib/README.md` before writing a helper — reuse what exists.
 - `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
 - `prisma/schema.prisma` — Prisma schema (SQLite datasource only for now, no models)
 
