@@ -11,3 +11,10 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String
+  createdAt DateTime @default(now())
+}

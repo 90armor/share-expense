@@ -33,7 +33,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - Check `src/lib/README.md` before writing a helper — reuse what exists.
 - UI: tokens + src/components only, no raw colors (docs/DESIGN_SYSTEM.md); preview at /dev/components (dev only).
 - `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
-- `prisma/schema.prisma` — Prisma schema (SQLite datasource only for now, no models)
+- `prisma/` — schema + committed migrations; Prisma client lives in `src/server/db.ts` (server-only, never src/lib); `db:*` scripts: README › Database
 
 ## Git Workflow
 

@@ -26,7 +26,8 @@ coverage/
 # Database
 *.db
 *.db-journal
-data/
+data/*
+!data/.gitkeep
 
 # Next.js generated
 next-env.d.ts

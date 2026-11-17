@@ -38,16 +38,37 @@ RUN npx prisma generate --config prisma7.config.ts
 # time) — normal default for `docker build`, documented here, not a blocker.
 RUN npm run build
 
+# ---- prisma-cli: only the Prisma CLI (+ dotenv for prisma7.config.ts) ----
+# The standalone output has no CLI, but the runner applies migrations at start.
+# Versions are read from package.json so they stay pinned to the app's.
+# --legacy-peer-deps: don't pull in prisma's peers (better-sqlite3, typescript).
+FROM node:24-slim AS prisma-cli
+WORKDIR /prisma-cli
+COPY package.json /tmp/app-package.json
+RUN PRISMA_VERSION=$(node -p "require('/tmp/app-package.json').devDependencies.prisma") \
+    && DOTENV_VERSION=$(node -p "require('/tmp/app-package.json').dependencies.dotenv") \
+    && npm init -y >/dev/null \
+    && npm install --no-save --no-package-lock --legacy-peer-deps \
+       "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}"
+
 # ---- runner: minimal production image, non-root ----
 FROM node:24-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+# SQLite file lives in /app/data — mount a volume or host folder there.
+ENV DATABASE_URL=file:/app/data/app.db
 
 RUN groupadd --system --gid 1001 nodejs \
-    && useradd --system --uid 1001 --gid nodejs nextjs
+    && useradd --system --uid 1001 --gid nodejs nextjs \
+    && mkdir -p /app/data \
+    && chown nextjs:nodejs /app/data
+# ^ SQLite needs a writable directory (journal file), not just a writable
+#   file. A fresh named volume copies this ownership on first mount.
 
+# Prisma CLI first, so the standalone output's traced files win on overlap.
+COPY --from=prisma-cli /prisma-cli/node_modules ./node_modules
 # Next.js standalone output: minimal server.js + pruned node_modules.
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -55,7 +76,13 @@ COPY --from=build --chown=nextjs:nodejs /app/public ./public
 # Prisma client uses a custom output path (outside node_modules) — copy
 # explicitly rather than rely on the standalone tracer to catch it.
 COPY --from=build --chown=nextjs:nodejs /app/src/generated ./src/generated
+# What `prisma migrate deploy` needs at start.
+COPY --from=build /app/prisma7.config.ts ./
+COPY --from=build /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=build /app/prisma/migrations ./prisma/migrations
+COPY --from=build --chmod=755 /app/docker-entrypoint.sh ./
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+# Migrate, then `exec node server.js` (node becomes PID 1 and gets signals).
+CMD ["./docker-entrypoint.sh"]
