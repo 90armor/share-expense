@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { CheckboxGroup } from "@/components/CheckboxGroup";
 import { Input } from "@/components/Input";
 import { RadioGroup } from "@/components/RadioGroup";
 import { Table } from "@/components/Table";
@@ -36,6 +37,12 @@ const swatches = [
   ["danger-subtle", "bg-danger-subtle"],
   ["focus", "bg-focus"],
 ] as const;
+
+const memberOptions = [
+  { value: "aung", label: "Aung" },
+  { value: "bobo", label: "Bo Bo" },
+  { value: "chit", label: "Chit" },
+];
 
 const currencyOptions = CURRENCY_CODES.map((code) => ({
   value: code,
@@ -150,6 +157,31 @@ export default function ComponentsPage() {
             name="demo-currency-disabled"
             options={currencyOptions}
             defaultValue="USD"
+            disabled
+          />
+        </div>
+      </Section>
+
+      <Section title="CheckboxGroup">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <CheckboxGroup
+            label="Shared by"
+            name="demo-shared"
+            options={memberOptions}
+            defaultValues={["aung", "chit"]}
+            hint="Split equally between everyone checked."
+          />
+          <CheckboxGroup
+            label="Shared by"
+            name="demo-shared-error"
+            options={memberOptions}
+            error="Choose at least one person"
+          />
+          <CheckboxGroup
+            label="Shared by"
+            name="demo-shared-disabled"
+            options={memberOptions}
+            defaultValues={["bobo"]}
             disabled
           />
         </div>
