@@ -8,10 +8,12 @@ export type ModalProps = {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Main action(s), shown right of Close in one footer row. */
+  actions?: ReactNode;
 };
 
 /** Native <dialog>: focus trap, Esc and top-layer come from the browser. */
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, actions }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -19,7 +21,12 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     const dialog = dialogRef.current;
     if (!dialog) return;
     // Guards keep this safe when Strict Mode runs the effect twice.
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      // showModal() focuses the first [autofocus] descendant. React's autoFocus
+      // prop never writes that attribute on the client, so set it here.
+      dialog.querySelector("[data-modal-close]")?.setAttribute("autofocus", "");
+      dialog.showModal();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
@@ -36,10 +43,17 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           {title}
         </h2>
         <div>{children}</div>
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={onClose}>
+        <div
+          className={
+            actions
+              ? "flex flex-wrap justify-end gap-3 *:grow sm:*:grow-0"
+              : "flex justify-end"
+          }
+        >
+          <Button variant="secondary" onClick={onClose} data-modal-close="">
             Close
           </Button>
+          {actions}
         </div>
       </div>
     </dialog>
