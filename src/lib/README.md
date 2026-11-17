@@ -8,4 +8,5 @@ Shared, framework-free helpers. Pure TypeScript — no Next.js, React or Prisma 
 - `result.ts` — `Result<T>` (ok / fail) with `ok()` and `fail()`; server code returns these instead of throwing across boundaries.
 - `limits.ts` — input limits (`NAME_MAX_LENGTH`) shared by server validation and client forms (`maxLength`); zod-free so client components can import it.
 - `validation.ts` — zod schemas (`nameSchema`, `idSchema` (UUID v4, strict), `currencyCodeSchema`, `moneyAmountSchema(currency)`) and `parseWith(schema, input): Result<T>` with a field → message map.
+- `formState.ts` — `FormState<F>` (`{ error, values }`, serializable) and pure form helpers shared by features: `readFormFields(formData, fields)`, `toFormState(error, values)`, `fieldError(state, field)`, `formError(state, visibleFields)`.
 - `cx.ts` — `cx(...parts)` joins class names, skipping `false` / `null` / `undefined` / empty strings.

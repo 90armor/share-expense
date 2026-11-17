@@ -17,4 +17,17 @@ model Group {
   name      String
   currency  String
   createdAt DateTime @default(now())
+  members   Member[]
+}
+
+model Member {
+  id        String   @id @default(uuid(4))
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  name      String
+  /// Normalized name (NFC, whitespace collapsed, lowercased), set by the member service only.
+  nameKey   String
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, nameKey])
 }

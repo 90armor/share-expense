@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/Card";
 import { getGroup } from "@/features/group/service";
+import { AddMemberForm } from "@/features/member/AddMemberForm";
+import { RemoveMemberForm } from "@/features/member/RemoveMemberForm";
+import { listMembers } from "@/features/member/service";
 import { getDb } from "@/server/db";
 
 export const metadata: Metadata = { title: "Group" };
@@ -48,13 +51,47 @@ async function GroupDetails({
   }
 
   const group = result.value;
+  const members = await listMembers(getDb(), group.id);
+  // The group exists and its id is valid, so any failure here is UNEXPECTED (logged).
+  if (!members.ok) throw new Error("Could not load members");
+
   return (
-    <Card className="flex w-full max-w-md flex-col gap-4">
-      <h1 className="text-2xl font-semibold break-words">{group.name}</h1>
-      <dl className="flex gap-2">
-        <dt className="text-muted">Currency</dt>
-        <dd className="font-medium">{group.currency}</dd>
-      </dl>
+    <Card className="flex w-full max-w-md flex-col gap-6">
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold break-words">{group.name}</h1>
+        <dl className="flex gap-2">
+          <dt className="text-muted">Currency</dt>
+          <dd className="font-medium">{group.currency}</dd>
+        </dl>
+      </div>
+      <section
+        aria-labelledby="members-heading"
+        className="flex flex-col gap-4"
+      >
+        <h2 id="members-heading" className="text-lg font-semibold">
+          Members
+        </h2>
+        {members.value.length === 0 ? (
+          <p className="text-muted">No members yet.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {members.value.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center justify-between gap-4 py-2"
+              >
+                <span className="min-w-0 break-words">{member.name}</span>
+                <RemoveMemberForm
+                  groupId={group.id}
+                  memberId={member.id}
+                  memberName={member.name}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+        <AddMemberForm groupId={group.id} />
+      </section>
     </Card>
   );
 }

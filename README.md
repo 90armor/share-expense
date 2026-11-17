@@ -71,10 +71,17 @@ The container runs as uid 1001 and SQLite needs a writable `/app/data` directory
 
 - Observed once (cause unconfirmed): after editing `src/app/globals.css`, `next dev` and `next build` kept serving the old stylesheet until `.next/cache/turbopack` (dev: `.next/dev/cache/turbopack`) was moved aside and the app rebuilt.
 
-## Phase 0 Checklist
+## Phase Checklist
 
 - [x] README.md — project scope + git rules
 - [x] CLAUDE.md — AI assistant working rules
 - [x] .gitignore — Node/Next.js baseline
 - [x] .claude/settings.json — permission guardrails (.env deny, read-only git allow)
 - [x] Phase 1 — Next.js + TypeScript scaffold, Prisma + SQLite, Tailwind, Vitest, ESLint/Prettier, GitHub Actions CI
+- [x] Phase 2 — design system, shared lib, DB foundation, create-group slice (PRs #9–#11)
+- [ ] Phase 3 — MVP features
+  - [x] Create group
+  - [x] Member add/remove
+  - [ ] Add expense
+  - [ ] View balance
+  - [ ] Settle
