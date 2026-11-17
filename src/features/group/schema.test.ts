@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CURRENCY_CODES } from "@/lib/currency";
-import { NAME_MAX_LENGTH, parseWith } from "@/lib/validation";
+import { NAME_MAX_LENGTH } from "@/lib/limits";
+import { parseWith } from "@/lib/validation";
 import { createGroupSchema } from "./schema";
 
 describe("createGroupSchema", () => {

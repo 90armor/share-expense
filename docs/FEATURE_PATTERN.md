@@ -16,7 +16,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 `page → action → service → db`. Pages only read through services; actions only call services.
 
-- **Validation lives in the service only.** Services take `input: unknown` and always run `parseWith(schema, input)`, for writes and reads (ids too, via `idSchema`). Every caller goes through the service; never skip validation. Validation is always server-side; no HTML `required`/`maxLength`, so users see the server's messages.
+- **Validation lives in the service only.** Services take `input: unknown` and always run `parseWith(schema, input)`, for writes and reads (ids too, via `idSchema`). Every caller goes through the service; never skip validation. Validation is always server-side. No HTML `required` (users see the server's messages); `maxLength` is fine as a UX aid when it uses the same constant from `src/lib/limits.ts`.
 - **The service takes the db as a parameter.** App code passes `getDb()`; tests pass `createTestDb().db`.
 - **Results, not throws.** Expected failures return `fail(appError(...))`: `VALIDATION` (with a field map), `NOT_FOUND`, `CONFLICT`. DB calls sit in `try/catch`: log the details with `console.error("[<feature>] …", error)` and return `UNEXPECTED` with a generic message. Never send DB errors to the user.
 - **Return shaped objects** (e.g. `Group = { id, name, currency }`), never raw rows.

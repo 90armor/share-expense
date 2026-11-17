@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { RadioGroup } from "@/components/RadioGroup";
 import { CURRENCY_CODES } from "@/lib/currency";
+import { NAME_MAX_LENGTH } from "@/lib/limits";
 import { createGroupAction } from "./actions";
 import {
   fieldError,
@@ -41,6 +42,8 @@ export function CreateGroupForm() {
         name="name"
         autoComplete="off"
         placeholder="Trip to Bagan"
+        maxLength={NAME_MAX_LENGTH}
+        hint={`Up to ${NAME_MAX_LENGTH} characters`}
         defaultValue={state.values.name}
         error={fieldError(state, "name")}
       />

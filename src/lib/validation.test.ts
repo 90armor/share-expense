@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { NAME_MAX_LENGTH } from "./limits";
 import {
-  NAME_MAX_LENGTH,
   currencyCodeSchema,
   idSchema,
   moneyAmountSchema,

@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { appError } from "./appError";
 import { CURRENCY_CODES, type CurrencyCode } from "./currency";
+import { NAME_MAX_LENGTH } from "./limits";
 import { parseAmount } from "./money";
 import { fail, ok, type Result } from "./result";
-
-export const NAME_MAX_LENGTH = 100;
 
 export const nameSchema = z
   .string()

@@ -21,6 +21,20 @@ describe("buttonClassName", () => {
     expect(value).not.toContain("min-h-11");
   });
 
+  // `enabled:` is `:enabled`, which an <a> never matches, so links styled with
+  // buttonClassName() got no hover. `not-disabled:` is `:not(:disabled)`:
+  // it matches links and enabled buttons, but still skips a disabled <button>.
+  it.each(["primary", "secondary", "ghost", "danger"] as const)(
+    "gives the %s variant a hover that also matches links",
+    (variant) => {
+      const hover = classes(buttonClassName({ variant })).filter((c) =>
+        c.includes("hover:"),
+      );
+      expect(hover.length).toBeGreaterThan(0);
+      for (const c of hover) expect(c).toMatch(/^not-disabled:hover:/);
+    },
+  );
+
   it("appends an extra className last", () => {
     expect(buttonClassName({ className: "w-full" }).endsWith(" w-full")).toBe(
       true,
