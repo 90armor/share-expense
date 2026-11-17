@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
       aria-labelledby={titleId}
       // Esc fires "cancel", then "close"; "close" covers both paths.
       onClose={onClose}
-      className="m-auto w-full max-w-md rounded-lg border border-border bg-surface p-0 text-ink shadow-modal backdrop:bg-ink/40"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-lg border border-border bg-surface p-0 text-ink shadow-modal backdrop:bg-ink/40"
     >
       <div className="flex flex-col gap-4 p-6">
         <h2 id={titleId} className="text-lg font-semibold">
