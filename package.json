@@ -33,15 +33,15 @@
     "@tailwindcss/turbopack": "4.3.3",
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
     "eslint-config-prettier": "10.1.8",
     "prettier": "3.10.1",
     "prisma": "7.10.1",
     "tailwindcss": "4.3.3",
-    "typescript": "^5",
+    "typescript": "5.9.3",
     "vitest": "5.1.0"
   }
 }
