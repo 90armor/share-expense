@@ -17,8 +17,12 @@ const MAX_INPUT_LENGTH = 40;
 
 // Integer part: "0", plain digits without a leading zero, or valid thousands grouping.
 // Optional fraction: 1-2 digits.
-const AMOUNT_PATTERN = /^(0|[1-9]\d{0,2}(,\d{3})+|[1-9]\d*)(\.\d{1,2})?$/;
-const TOO_MANY_DECIMALS_PATTERN = /^[\d,]*\.\d{3,}$/;
+const INTEGER_PART = String.raw`(0|[1-9]\d{0,2}(,\d{3})+|[1-9]\d*)`;
+const AMOUNT_PATTERN = new RegExp(String.raw`^${INTEGER_PART}(\.\d{1,2})?$`);
+// Same valid integer part, so "1,23.456" gets the generic message, not "decimals".
+const TOO_MANY_DECIMALS_PATTERN = new RegExp(
+  String.raw`^${INTEGER_PART}\.\d{3,}$`,
+);
 
 function invalid(message: string): Result<Money> {
   return fail(appError("VALIDATION", message));

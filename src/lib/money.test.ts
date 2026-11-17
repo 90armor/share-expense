@@ -83,6 +83,18 @@ describe("parseAmount", () => {
   });
 });
 
+describe("parseAmount error messages", () => {
+  it.each([
+    ["1,23.456", "Enter a valid amount, e.g. 1,234.50"],
+    ["1,234.567", "At most 2 decimal places"],
+  ])("%j -> %j", (input, message) => {
+    expect(parseAmount(input, "MMK")).toEqual({
+      ok: false,
+      error: { code: "VALIDATION", message },
+    });
+  });
+});
+
 describe("parseAmount over-long input", () => {
   afterEach(() => {
     vi.restoreAllMocks();

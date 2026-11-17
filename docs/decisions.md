@@ -38,3 +38,4 @@
 - `zod` was explicitly approved by the user for PR #8 (feat/shared-lib) as an exception to "no unrequested dependency."
 - `parseAmount` rejects input longer than 40 characters (int64 max formatted is 25) before running the regex or `BigInt`, so huge strings cost no conversion work. `parseWith` uses `Object.hasOwn` so field names like `constructor`/`toString` are not shadowed by `Object.prototype`.
 - OPEN: Sums of many amounts can exceed int64 even though each parsed amount fits; handle in Phase 3 when balances or DB writes exist (e.g. lower per-amount cap or check the sum).
+- `parseAmount`'s "At most 2 decimal places" message only fires when the integer part is valid: `TOO_MANY_DECIMALS_PATTERN` reuses `AMOUNT_PATTERN`'s integer-part regex source, so malformed input like `1,23.456` gets the generic "Enter a valid amount" message instead of a misleading decimals hint.

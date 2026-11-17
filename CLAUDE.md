@@ -22,7 +22,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `npm run format` / `format:check` — Prettier write / check (CI runs format:check)
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
-- `npm run test` — Vitest unit tests (smoke test only for now)
+- `npm run test` — Vitest unit tests (`src/**/*.test.ts`, next to the code they cover)
 - `docker compose up --build` / `down` / `run --rm app npm run <cmd>` — Docker dev workflow (build & run, stop, run lint/typecheck/test in container)
 
 ## Naming & Structure Conventions
