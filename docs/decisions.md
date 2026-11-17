@@ -34,3 +34,7 @@
 - `formatAmount`/`formatMoney` avoid `Intl` entirely: grouping is done by hand on the bigint's string form. This keeps output exact for any size (no loss above 2^53) and byte-identical on server and in every browser, so there is no hydration mismatch. Format is `MMK 1,234.50` (code, ASCII space, amount; negatives `MMK -1,234.50`, never `-0.00`).
 - Added `zod` 4.6.7 (npm `latest` at the time, pinned exact) for input validation; `parseWith` wraps `safeParse` into a `Result` with a field → message map so server code returns errors instead of throwing.
 - `tsconfig.json` `target` raised from `ES2017` to `ES2020` so bigint literals (`100n`) type-check. Next.js compiles with SWC, so this only affects `tsc` type-checking.
+- `CURRENCY_EXPONENT` is typed `Record<CurrencyCode, 2>`, not `Record<CurrencyCode, number>`: `parseAmount`/`formatAmount` hard-code 2 decimals, so adding a currency with a different exponent must fail typecheck rather than silently mis-scale amounts.
+- `zod` was explicitly approved by the user for PR #8 (feat/shared-lib) as an exception to "no unrequested dependency."
+- `parseAmount` rejects input longer than 40 characters (int64 max formatted is 25) before running the regex or `BigInt`, so huge strings cost no conversion work. `parseWith` uses `Object.hasOwn` so field names like `constructor`/`toString` are not shadowed by `Object.prototype`.
+- OPEN: Sums of many amounts can exceed int64 even though each parsed amount fits; handle in Phase 3 when balances or DB writes exist (e.g. lower per-amount cap or check the sum).

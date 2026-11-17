@@ -8,7 +8,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Intended Stack (Phase 1 မှာ scaffold လုပ်မယ်)
 
-- Next.js + TypeScript
+- Next.js + TypeScript + zod (validation)
 - SQLite + Prisma
 - Tailwind CSS
 - Vitest (unit), Playwright (e2e)

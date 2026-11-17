@@ -51,7 +51,7 @@ export function parseWith<S extends z.ZodType>(
   for (const issue of parsed.error.issues) {
     const key =
       issue.path.length > 0 ? issue.path.map(String).join(".") : ROOT_FIELD;
-    fields[key] ??= issue.message;
+    if (!Object.hasOwn(fields, key)) fields[key] = issue.message;
   }
   return fail(appError("VALIDATION", "Invalid input", fields));
 }

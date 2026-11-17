@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CurrencyCode } from "./currency";
 import {
   addMoney,
@@ -80,6 +80,36 @@ describe("parseAmount", () => {
       expect(result.error.code).toBe("VALIDATION");
       expect(result.error.message).not.toBe("");
     }
+  });
+});
+
+describe("parseAmount over-long input", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects a 10,000-digit string", () => {
+    expect(parseAmount("9".repeat(10_000), "MMK")).toEqual({
+      ok: false,
+      error: { code: "VALIDATION", message: "Amount is too large" },
+    });
+  });
+
+  it("rejects over-long input before converting it to BigInt", () => {
+    const bigIntSpy = vi.spyOn(globalThis, "BigInt");
+    expect(parseAmount("9".repeat(10_000), "MMK").ok).toBe(false);
+    expect(bigIntSpy).not.toHaveBeenCalled();
+  });
+
+  it("still accepts exactly int64 max and rejects one minor unit above", () => {
+    expect(parseAmount("92,233,720,368,547,758.07", "MMK")).toEqual({
+      ok: true,
+      value: { amount: INT64_MAX, currency: "MMK" },
+    });
+    expect(parseAmount("92,233,720,368,547,758.08", "MMK")).toEqual({
+      ok: false,
+      error: { code: "VALIDATION", message: "Amount is too large" },
+    });
   });
 });
 

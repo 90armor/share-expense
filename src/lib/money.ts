@@ -8,8 +8,12 @@ import { fail, ok, type Result } from "./result";
  */
 export type Money = Readonly<{ amount: bigint; currency: CurrencyCode }>;
 
+// parse/format hard-code exponent 2 (x100); CURRENCY_EXPONENT is typed Record<CurrencyCode, 2> so a currency with another exponent fails typecheck instead of being mis-scaled.
+
 /** Largest value a signed 64-bit DB column (Prisma BigInt) can hold. */
 const MAX_MINOR_UNITS = 9_223_372_036_854_775_807n;
+/** int64 max as input is 25 chars ("92,233,720,368,547,758.07"); anything longer is rejected before regex/BigInt work. */
+const MAX_INPUT_LENGTH = 40;
 
 // Integer part: "0", plain digits without a leading zero, or valid thousands grouping.
 // Optional fraction: 1-2 digits.
@@ -27,6 +31,7 @@ export function parseAmount(
 ): Result<Money> {
   const text = input.trim();
   if (text === "") return invalid("Amount is required");
+  if (text.length > MAX_INPUT_LENGTH) return invalid("Amount is too large");
   if (text.startsWith("-")) return invalid("Amount cannot be negative");
   if (!AMOUNT_PATTERN.test(text)) {
     if (TOO_MANY_DECIMALS_PATTERN.test(text))

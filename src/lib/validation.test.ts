@@ -145,4 +145,18 @@ describe("parseWith field map", () => {
       expect(Object.keys(result.error.fields ?? {})).toEqual(["_root"]);
     }
   });
+
+  it("keeps errors for field names that exist on Object.prototype", () => {
+    const protoSchema = z.object({
+      constructor: nameSchema,
+      toString: nameSchema,
+    });
+    const result = parseWith(protoSchema, { constructor: " ", toString: "" });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.fields).toEqual({
+      constructor: "Name is required",
+      toString: "Name is required",
+    });
+  });
 });
