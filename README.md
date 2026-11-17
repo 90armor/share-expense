@@ -14,6 +14,10 @@ Share Expense ဟာ group ထဲက အသုံးစရိတ်တွေက�
 
 အခြား feature (recurring expense, multi-currency, notification, auth providers, စသည်) ကို ဒီ scope အတွင်း ထည့်မည်မဟုတ်ပါ။
 
+## Known limitations
+
+- Anyone with a group link can view and edit that group (no login in the MVP).
+
 ## Git Workflow
 
 - `main` ပေါ်မှာ **တိုက်ရိုက် commit/push လုပ်ခွင့်မရှိပါ**။

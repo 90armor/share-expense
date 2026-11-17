@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { NAME_MAX_LENGTH } from "./limits";
 import {
-  NAME_MAX_LENGTH,
   currencyCodeSchema,
   idSchema,
   moneyAmountSchema,
@@ -34,16 +34,28 @@ describe("nameSchema", () => {
   );
 });
 
+const UUID_V4 = "3f2b8c1e-9a4d-4e2f-8b6a-1c2d3e4f5a6b";
+
 describe("idSchema", () => {
-  it("accepts and trims an id", () => {
-    expect(parseWith(idSchema, " abc123 ")).toEqual({
-      ok: true,
-      value: "abc123",
-    });
+  it("accepts a UUID v4 unchanged", () => {
+    expect(parseWith(idSchema, UUID_V4)).toEqual({ ok: true, value: UUID_V4 });
   });
 
-  it.each([[""], ["  "], ["x".repeat(65)], [42]])("rejects %j", (input) => {
-    expect(parseWith(idSchema, input).ok).toBe(false);
+  it.each([
+    [""],
+    ["abc123"],
+    [` ${UUID_V4}`],
+    [`${UUID_V4} `],
+    ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"], // v1 (time-based)
+    ["01890a5d-ac96-774b-bcce-b302099a8057"], // v7 (time-ordered)
+    ["00000000-0000-0000-0000-000000000000"], // nil
+    [42],
+  ])("rejects %j", (input) => {
+    const result = parseWith(idSchema, input);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.fields?._root).toBe("Invalid ID");
+    }
   });
 });
 
@@ -99,7 +111,7 @@ describe("parseWith field map", () => {
     const result = parseWith(schema, {
       name: " Dinner ",
       currency: "MMK",
-      payer: { id: "m1" },
+      payer: { id: UUID_V4 },
       amount: "15,000",
     });
     expect(result).toEqual({
@@ -107,7 +119,7 @@ describe("parseWith field map", () => {
       value: {
         name: "Dinner",
         currency: "MMK",
-        payer: { id: "m1" },
+        payer: { id: UUID_V4 },
         amount: { amount: 1500000n, currency: "MMK" },
       },
     });

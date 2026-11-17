@@ -6,7 +6,7 @@
 
 Share Expense — group အသုံးစရိတ် မျှဝေမှု balance တွက်ပေးတဲ့ practice project။ Scope နဲ့ MVP feature list အတွက် README.md ကိုကြည့်ပါ (feature ၅ ခုပဲ — ဒီထက်မပိုရ)။
 
-## Intended Stack (Phase 1 မှာ scaffold လုပ်မယ်)
+## Stack
 
 - Next.js + TypeScript + zod (validation)
 - SQLite + Prisma
@@ -32,7 +32,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `src/lib` — shared utilities, camelCase filenames
 - Check `src/lib/README.md` before writing a helper — reuse what exists.
 - UI: tokens + src/components only, no raw colors (docs/DESIGN_SYSTEM.md); preview at /dev/components (dev only).
-- `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
+- `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands; copy docs/FEATURE_PATTERN.md
 - `prisma/` — schema + committed migrations; Prisma client lives in `src/server/db.ts` (server-only, never src/lib); `db:*` scripts: README › Database
 
 ## Git Workflow

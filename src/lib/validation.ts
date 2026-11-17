@@ -1,11 +1,9 @@
 import { z } from "zod";
 import { appError } from "./appError";
 import { CURRENCY_CODES, type CurrencyCode } from "./currency";
+import { NAME_MAX_LENGTH } from "./limits";
 import { parseAmount } from "./money";
 import { fail, ok, type Result } from "./result";
-
-export const NAME_MAX_LENGTH = 100;
-export const ID_MAX_LENGTH = 64;
 
 export const nameSchema = z
   .string()
@@ -13,12 +11,11 @@ export const nameSchema = z
   .min(1, "Name is required")
   .max(NAME_MAX_LENGTH, `Name must be at most ${NAME_MAX_LENGTH} characters`);
 
-/** Generic for now; tighten once the first Prisma model picks cuid/uuid. */
-export const idSchema = z
-  .string()
-  .trim()
-  .min(1, "ID is required")
-  .max(ID_MAX_LENGTH, `ID must be at most ${ID_MAX_LENGTH} characters`);
+/**
+ * Row ids are UUID v4 (Prisma `@default(uuid(4))`): random, so a URL cannot be
+ * guessed. Strict: other versions (v1/v7 are time-based), nil and whitespace fail.
+ */
+export const idSchema = z.uuidv4("Invalid ID");
 
 export const currencyCodeSchema = z.enum(
   CURRENCY_CODES,
