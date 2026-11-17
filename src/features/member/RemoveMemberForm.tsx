@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/Button";
 import { Modal } from "@/components/Modal";
 import { removeMemberAction } from "./actions";
@@ -14,6 +14,7 @@ type Props = { groupId: string; memberId: string; memberName: string };
 /** Remove button + confirm Modal. On success the row disappears (refresh), unmounting this. */
 export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
   const [open, setOpen] = useState(false);
+  const formId = useId();
   const [state, formAction, pending] = useActionState(
     removeMemberAction,
     initialRemoveMemberFormState(groupId, memberId),
@@ -29,10 +30,25 @@ export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
       >
         Remove
       </Button>
-      {/* Generic title: Modal's heading (src/components, unchanged) has no
-          break-words, so the possibly long name goes in the body instead. */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Remove member?">
-        <form action={formAction} className="flex flex-col gap-4">
+      {/* Generic title: Modal's heading has no break-words, so the possibly
+          long name goes in the body instead. */}
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Remove member?"
+        actions={
+          // Outside the <form> (Modal footer), so tied to it with form={formId}.
+          <Button
+            type="submit"
+            form={formId}
+            variant="danger"
+            disabled={pending}
+          >
+            {pending ? "Removing…" : "Remove member"}
+          </Button>
+        }
+      >
+        <form id={formId} action={formAction} className="flex flex-col gap-4">
           {error && (
             <p
               role="alert"
@@ -46,9 +62,6 @@ export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
           </p>
           <input type="hidden" name="groupId" value={groupId} />
           <input type="hidden" name="memberId" value={memberId} />
-          <Button type="submit" variant="danger" disabled={pending}>
-            {pending ? "Removing…" : "Remove member"}
-          </Button>
         </form>
       </Modal>
     </>
