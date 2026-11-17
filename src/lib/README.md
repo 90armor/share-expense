@@ -7,3 +7,4 @@ Shared, framework-free helpers. Pure TypeScript — no Next.js, React or Prisma 
 - `appError.ts` — `AppError` plain object (`VALIDATION` | `NOT_FOUND` | `CONFLICT` | `UNEXPECTED`, message, optional field map) and `appError()`.
 - `result.ts` — `Result<T>` (ok / fail) with `ok()` and `fail()`; server code returns these instead of throwing across boundaries.
 - `validation.ts` — zod schemas (`nameSchema`, `idSchema`, `currencyCodeSchema`, `moneyAmountSchema(currency)`) and `parseWith(schema, input): Result<T>` with a field → message map.
+- `cx.ts` — `cx(...parts)` joins class names, skipping `false` / `null` / `undefined` / empty strings.
