@@ -4,6 +4,7 @@ import {
   fieldError,
   formError,
   readFormFields,
+  readFormList,
   toFormState,
   type FormState,
 } from "./formState";
@@ -58,6 +59,37 @@ describe("readFormFields", () => {
   });
 });
 
+describe("readFormList", () => {
+  it("reads every entry of a repeated field, in order, as typed", () => {
+    expect(
+      readFormList(
+        formData([
+          ["ids", "a"],
+          ["other", "x"],
+          ["ids", " b "],
+        ]),
+        "ids",
+      ),
+    ).toEqual(["a", " b "]);
+  });
+
+  it("returns an empty list when the field is missing", () => {
+    expect(readFormList(formData([["other", "x"]]), "ids")).toEqual([]);
+  });
+
+  it("drops file uploads", () => {
+    expect(
+      readFormList(
+        formData([
+          ["ids", new Blob(["x"])],
+          ["ids", "a"],
+        ]),
+        "ids",
+      ),
+    ).toEqual(["a"]);
+  });
+});
+
 describe("toFormState", () => {
   it("keeps field errors and the submitted values for VALIDATION", () => {
     const error = appError("VALIDATION", "Invalid input", {
@@ -89,6 +121,13 @@ describe("toFormState", () => {
     const state = toFormState(appError("UNEXPECTED", "x"), input);
     input.name = "changed";
     expect(state.values.name).toBe("Aung");
+  });
+
+  it("copies a multi-value field, so later changes to the input do not leak in", () => {
+    const input = { groupId: "g", ids: ["a", "b"] };
+    const state = toFormState(appError("UNEXPECTED", "x"), input);
+    input.ids.push("c");
+    expect(state.values.ids).toEqual(["a", "b"]);
   });
 
   it("returns a plain, JSON-serializable object", () => {

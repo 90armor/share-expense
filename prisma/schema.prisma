@@ -13,21 +13,54 @@ datasource db {
 }
 
 model Group {
-  id        String   @id @default(uuid(4))
+  id        String    @id @default(uuid(4))
   name      String
   currency  String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   members   Member[]
+  expenses  Expense[]
 }
 
 model Member {
-  id        String   @id @default(uuid(4))
-  groupId   String
-  group     Group    @relation(fields: [groupId], references: [id])
-  name      String
+  id             String               @id @default(uuid(4))
+  groupId        String
+  group          Group                @relation(fields: [groupId], references: [id])
+  name           String
   /// Normalized name (NFC, whitespace collapsed, lowercased), set by the member service only.
-  nameKey   String
-  createdAt DateTime @default(now())
+  nameKey        String
+  createdAt      DateTime             @default(now())
+  /// Restrict on both: a member who paid for or shares an expense cannot be removed.
+  paidExpenses   Expense[]            @relation("ExpensePayer")
+  participations ExpenseParticipant[]
 
   @@unique([groupId, nameKey])
+}
+
+/// Equal sharing between participants; no per-person amounts are stored.
+model Expense {
+  id           String               @id @default(uuid(4))
+  groupId      String
+  group        Group                @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  payerId      String
+  payer        Member               @relation("ExpensePayer", fields: [payerId], references: [id], onDelete: Restrict)
+  /// Minor units (1/100). Currency is the group's, not stored per expense.
+  amount       BigInt
+  /// Trimmed; blank is stored as null.
+  description  String?
+  createdAt    DateTime             @default(now())
+  participants ExpenseParticipant[]
+
+  @@index([groupId])
+  @@index([payerId])
+}
+
+/// Who shares an expense. The composite id makes each member appear once per expense.
+model ExpenseParticipant {
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@id([expenseId, memberId])
+  @@index([memberId])
 }

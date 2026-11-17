@@ -313,6 +313,77 @@ describe("member service (temp SQLite with migrations applied)", () => {
       expect(await testDb.db.member.count()).toBe(1);
     });
 
+    // A member who paid for or shares an expense is kept (FK Restrict -> CONFLICT).
+    describe("with expenses", () => {
+      const CONFLICT = {
+        ok: false,
+        error: {
+          code: "CONFLICT",
+          message:
+            "This member paid for or shares an expense and can't be removed.",
+        },
+      };
+
+      async function expense(payerId: string, participantIds: string[]) {
+        await testDb.db.expense.create({
+          data: {
+            groupId: groupA,
+            payerId,
+            amount: 1000n,
+            participants: {
+              create: participantIds.map((memberId) => ({ memberId })),
+            },
+          },
+        });
+      }
+
+      it("returns CONFLICT for the payer and keeps the member", async () => {
+        const aung = await add(groupA, "Aung");
+        const mya = await add(groupA, "Mya");
+        await expense(aung.id, [mya.id]);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: aung.id }),
+        ).toEqual(CONFLICT);
+        expect(await testDb.db.member.count({ where: { id: aung.id } })).toBe(
+          1,
+        );
+      });
+
+      it("returns CONFLICT for a participant who did not pay", async () => {
+        const aung = await add(groupA, "Aung");
+        const mya = await add(groupA, "Mya");
+        await expense(aung.id, [aung.id, mya.id]);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: mya.id }),
+        ).toEqual(CONFLICT);
+        expect(await testDb.db.member.count({ where: { id: mya.id } })).toBe(1);
+        expect(await testDb.db.expenseParticipant.count()).toBe(2);
+      });
+
+      it("still removes a member with no expenses in the same group", async () => {
+        const aung = await add(groupA, "Aung");
+        const kyaw = await add(groupA, "Kyaw");
+        await expense(aung.id, [aung.id]);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: kyaw.id }),
+        ).toEqual({ ok: true, value: { id: kyaw.id } });
+      });
+
+      it("returns NOT_FOUND (not CONFLICT) for such a member via another group", async () => {
+        const aung = await add(groupA, "Aung");
+        await expense(aung.id, [aung.id]);
+
+        const result = await removeMember(testDb.db, {
+          groupId: groupB,
+          memberId: aung.id,
+        });
+        expect(!result.ok && result.error.code).toBe("NOT_FOUND");
+      });
+    });
+
     it.each([
       [{ groupId: "not-an-id", memberId: MISSING_ID }, ["groupId"]],
       [{ groupId: MISSING_ID, memberId: "" }, ["memberId"]],
@@ -326,8 +397,8 @@ describe("member service (temp SQLite with migrations applied)", () => {
     });
   });
 
-  // What exists today, before any Expense table: foreign keys are enforced,
-  // so the Restrict relation the expense PR will rely on actually blocks deletes.
+  // Foreign keys are enforced, so the Restrict relations from Expense and
+  // ExpenseParticipant to Member actually block deletes (see removeMember CONFLICT).
   describe("database foreign keys", () => {
     it("are switched on for the createTestDb client", async () => {
       const rows = await testDb.db.$queryRawUnsafe<
@@ -397,6 +468,36 @@ describe("member service (database failure)", () => {
       );
     },
   );
+
+  it("treats a foreign-key error from another model as UNEXPECTED, not CONFLICT", async () => {
+    const otherForeignKey = new Prisma.PrismaClientKnownRequestError(
+      "Foreign key constraint violated",
+      {
+        code: "P2003",
+        clientVersion: "7.10.1",
+        meta: {
+          modelName: "Group",
+          driverAdapterError: {
+            cause: { kind: "ForeignKeyConstraintViolation" },
+          },
+        },
+      },
+    );
+    const db = {
+      member: { deleteMany: () => Promise.reject(otherForeignKey) },
+    } as unknown as PrismaClient;
+
+    const result = await removeMember(db, {
+      groupId: MISSING_ID,
+      memberId: MISSING_ID_2,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: { code: "UNEXPECTED", message: UNEXPECTED_MESSAGE },
+    });
+    expect(errorSpy).toHaveBeenCalled();
+  });
 
   it("treats a unique error from any other index as UNEXPECTED, not CONFLICT", async () => {
     const otherUnique = new Prisma.PrismaClientKnownRequestError(
