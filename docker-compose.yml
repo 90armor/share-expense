@@ -7,13 +7,16 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: file:/app/data/dev.db
+      # Own file, separate from local dev's ./data/dev.db (see docs/decisions.md).
+      DATABASE_URL: file:/app/data/docker.db
     volumes:
       - .:/app
       - node_modules:/app/node_modules
       - next_cache:/app/.next
       - ./data:/app/data
-    command: npm run dev
+    # The bind mount hides the image's src/generated, so generate at start,
+    # then apply migrations (non-interactive), then start dev.
+    command: sh -c "npm run db:generate && npm run db:deploy && npm run dev"
 
 volumes:
   node_modules:

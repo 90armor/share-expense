@@ -28,6 +28,41 @@ Share Expense ဟာ group ထဲက အသုံးစရိတ်တွေက�
 - `DATABASE_URL` ကို `docker-compose.yml` ရဲ့ `environment:` ထဲမှာ တိုက်ရိုက်သတ်မှတ်ထားပါတယ် (`.env` ကို container ထဲ bind mount ကတစ်ဆင့်မြင်ရပေမယ့် `environment:` တန်ဖိုးက ဦးစားပေးပါတယ်)
 - `package.json` ပြောင်းရင် `docker compose down -v && docker compose up --build` ပြန်run ပါ (node_modules volume ပြန် rebuild ဖို့)
 
+## Database
+
+SQLite + Prisma 7 (better-sqlite3 adapter). Schema: `prisma/schema.prisma`; migrations are committed in `prisma/migrations`. App code gets the client from `getDb()` in `src/server/db.ts`.
+
+| Where | SQLite file | `DATABASE_URL` |
+| --- | --- | --- |
+| Local `npm run dev` | `./data/dev.db` | `file:./data/dev.db` (from `.env.example`) |
+| `docker compose up` (dev) | `./data/docker.db` on the host | `file:/app/data/docker.db` (set in `docker-compose.yml`) |
+| Production `runner` image | `/app/data/app.db` on a volume | `file:/app/data/app.db` (image default) |
+
+Local and Docker dev use different files on purpose: two processes on one SQLite file over a Docker bind mount can hit lock errors.
+
+Commands:
+
+- `npm run db:generate` — generate the Prisma client into `src/generated/prisma` (gitignored; run after clone and after schema changes)
+- `npm run db:migrate -- --name <change>` — create + apply a new migration from schema changes (dev only)
+- `npm run db:deploy` — apply committed migrations, no prompts
+- `npm run db:reset` — **DEV ONLY: deletes all data without asking**, then re-applies all migrations
+  - `npm run db:reset` resets `./data/dev.db`
+  - `docker compose run --rm app npm run db:reset` resets `./data/docker.db`
+
+Local first run: `npm ci && npm run db:generate && npm run db:deploy && npm run dev`, then `curl localhost:3000/api/health` → `{"status":"ok"}` (503 if the database can't be opened).
+
+`docker compose up --build` needs no extra steps: the container runs `db:generate`, then `db:deploy`, then `npm run dev`.
+
+Production `runner` image — migrations run automatically at container start (`docker-entrypoint.sh`); if they fail, the container exits non-zero and the server does not start:
+
+```sh
+docker build --target runner -t share-expense .
+docker run -p 3000:3000 -v share-expense-data:/app/data share-expense
+curl localhost:3000/api/health
+```
+
+The container runs as uid 1001 and SQLite needs a writable `/app/data` directory. A named volume (above) works as is. To use a host folder instead (`-v "$PWD/prod-data":/app/data`), on a Linux host make it writable first: `sudo chown 1001:1001 prod-data` (Docker Desktop on macOS maps ownership automatically).
+
 ## Troubleshooting
 
 - Observed once (cause unconfirmed): after editing `src/app/globals.css`, `next dev` and `next build` kept serving the old stylesheet until `.next/cache/turbopack` (dev: `.next/dev/cache/turbopack`) was moved aside and the app rebuilt.
