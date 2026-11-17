@@ -30,6 +30,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `src/app` — Next.js App Router routes
 - `src/components` — shared UI components, PascalCase filenames
 - `src/lib` — shared utilities, camelCase filenames
+- Check `src/lib/README.md` before writing a helper — reuse what exists.
 - `src/features/<name>` — per-MVP-feature folder, created when that feature's code lands
 - `prisma/schema.prisma` — Prisma schema (SQLite datasource only for now, no models)
 
