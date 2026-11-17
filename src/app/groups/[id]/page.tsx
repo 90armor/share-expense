@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/Card";
+import { Table } from "@/components/Table";
+import { AddExpenseForm } from "@/features/expense/AddExpenseForm";
+import { listExpenses } from "@/features/expense/service";
 import { getGroup } from "@/features/group/service";
 import { AddMemberForm } from "@/features/member/AddMemberForm";
 import { RemoveMemberForm } from "@/features/member/RemoveMemberForm";
 import { listMembers } from "@/features/member/service";
+import { formatMoney } from "@/lib/money";
 import { getDb } from "@/server/db";
 
 export const metadata: Metadata = { title: "Group" };
@@ -54,6 +58,8 @@ async function GroupDetails({
   const members = await listMembers(getDb(), group.id);
   // The group exists and its id is valid, so any failure here is UNEXPECTED (logged).
   if (!members.ok) throw new Error("Could not load members");
+  const expenses = await listExpenses(getDb(), group.id);
+  if (!expenses.ok) throw new Error("Could not load expenses");
 
   return (
     <Card className="flex w-full max-w-md flex-col gap-6">
@@ -91,6 +97,50 @@ async function GroupDetails({
           </ul>
         )}
         <AddMemberForm groupId={group.id} />
+      </section>
+      <section
+        aria-labelledby="expenses-heading"
+        className="flex flex-col gap-4"
+      >
+        <h2 id="expenses-heading" className="text-lg font-semibold">
+          Expenses
+        </h2>
+        {expenses.value.length === 0 ? (
+          <p className="text-muted">No expenses yet.</p>
+        ) : (
+          <Table
+            caption="Newest first"
+            columns={[
+              { key: "description", header: "Description" },
+              { key: "payer", header: "Paid by" },
+              { key: "amount", header: "Amount", align: "right" },
+              { key: "participants", header: "Shared by" },
+            ]}
+            rows={expenses.value.map((expense) => ({
+              description: expense.description ?? (
+                <span className="text-muted">No description</span>
+              ),
+              payer: expense.payer.name,
+              amount: (
+                <span className="whitespace-nowrap">
+                  {formatMoney(expense.amount)}
+                </span>
+              ),
+              participants: expense.participants
+                .map((member) => member.name)
+                .join(", "),
+            }))}
+          />
+        )}
+        {members.value.length === 0 ? (
+          <p className="text-muted">Add a member before adding an expense.</p>
+        ) : (
+          <AddExpenseForm
+            groupId={group.id}
+            currency={group.currency}
+            members={members.value}
+          />
+        )}
       </section>
     </Card>
   );
