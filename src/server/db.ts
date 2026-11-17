@@ -1,5 +1,5 @@
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "@/generated/prisma/client";
 
 /** Builds a Prisma client for a SQLite `file:` URL (path relative to cwd). */
 export function createDbClient(url: string): PrismaClient {

@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-import type { PrismaClient } from "../generated/prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { createDbClient } from "./db";
 
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
