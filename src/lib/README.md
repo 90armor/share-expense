@@ -4,6 +4,7 @@ Shared, framework-free helpers. Pure TypeScript — no Next.js, React or Prisma 
 
 - `currency.ts` — supported currency codes (`MMK`, `USD`, `KHR`), `CurrencyCode` type, exponent per currency, `isCurrencyCode` guard.
 - `money.ts` — `Money` (bigint minor units + currency), `parseAmount`, `formatAmount` / `formatMoney` (no Intl), `addMoney`, `subtractMoney`, `sumMoney`, `negate`, `isZero`, `assertSameCurrency` (throws on mixed currencies).
+- `split.ts` — `splitEqually(total, participantIds)` → `ParticipantShare[]` (`{ participantId, share: Money }`, sorted by id): equal split, the remainder goes 1 minor unit each to the lowest ids (string order); throws on an empty list, duplicate ids or a negative total.
 - `appError.ts` — `AppError` plain object (`VALIDATION` | `NOT_FOUND` | `CONFLICT` | `UNEXPECTED`, message, optional field map) and `appError()`.
 - `result.ts` — `Result<T>` (ok / fail) with `ok()` and `fail()`; server code returns these instead of throwing across boundaries.
 - `limits.ts` — input limits (`NAME_MAX_LENGTH`, `DESCRIPTION_MAX_LENGTH`, `AMOUNT_MAX_MINOR_UNITS`, `PARTICIPANTS_MAX`) shared by server validation and client forms (`maxLength`, hints); zod-free so client components can import it.
