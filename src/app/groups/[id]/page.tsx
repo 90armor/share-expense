@@ -2,14 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/Card";
-import { Table } from "@/components/Table";
-import { AddExpenseForm } from "@/features/expense/AddExpenseForm";
+import { ExpensesSection } from "@/features/expense/ExpensesSection";
 import { listExpenses } from "@/features/expense/service";
 import { getGroup } from "@/features/group/service";
-import { AddMemberForm } from "@/features/member/AddMemberForm";
-import { RemoveMemberForm } from "@/features/member/RemoveMemberForm";
+import { MembersSection } from "@/features/member/MembersSection";
 import { listMembers } from "@/features/member/service";
-import { formatMoney } from "@/lib/money";
 import { getDb } from "@/server/db";
 
 export const metadata: Metadata = { title: "Group" };
@@ -23,7 +20,7 @@ export default function GroupPage({ params }: PageProps<"/groups/[id]">) {
     <main className="flex flex-1 items-start justify-center px-4 py-16">
       <Suspense
         fallback={
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-2xl">
             <p className="text-muted">Loading group…</p>
           </Card>
         }
@@ -61,8 +58,10 @@ async function GroupDetails({
   const expenses = await listExpenses(getDb(), group.id);
   if (!expenses.ok) throw new Error("Could not load expenses");
 
+  // Order: the list is the focus. Balance (next feature) goes above Expenses.
+  // Members sit below; ExpensesSection's empty text says "below" (keep in sync).
   return (
-    <Card className="flex w-full max-w-md flex-col gap-6">
+    <Card className="flex w-full max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold break-words">{group.name}</h1>
         <dl className="flex gap-2">
@@ -70,78 +69,13 @@ async function GroupDetails({
           <dd className="font-medium">{group.currency}</dd>
         </dl>
       </div>
-      <section
-        aria-labelledby="members-heading"
-        className="flex flex-col gap-4"
-      >
-        <h2 id="members-heading" className="text-lg font-semibold">
-          Members
-        </h2>
-        {members.value.length === 0 ? (
-          <p className="text-muted">No members yet.</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-border">
-            {members.value.map((member) => (
-              <li
-                key={member.id}
-                className="flex items-center justify-between gap-4 py-2"
-              >
-                <span className="min-w-0 break-words">{member.name}</span>
-                <RemoveMemberForm
-                  groupId={group.id}
-                  memberId={member.id}
-                  memberName={member.name}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-        <AddMemberForm groupId={group.id} />
-      </section>
-      <section
-        aria-labelledby="expenses-heading"
-        className="flex flex-col gap-4"
-      >
-        <h2 id="expenses-heading" className="text-lg font-semibold">
-          Expenses
-        </h2>
-        {expenses.value.length === 0 ? (
-          <p className="text-muted">No expenses yet.</p>
-        ) : (
-          <Table
-            caption="Newest first"
-            columns={[
-              { key: "description", header: "Description" },
-              { key: "payer", header: "Paid by" },
-              { key: "amount", header: "Amount", align: "right" },
-              { key: "participants", header: "Shared by" },
-            ]}
-            rows={expenses.value.map((expense) => ({
-              description: expense.description ?? (
-                <span className="text-muted">No description</span>
-              ),
-              payer: expense.payer.name,
-              amount: (
-                <span className="whitespace-nowrap">
-                  {formatMoney(expense.amount)}
-                </span>
-              ),
-              participants: expense.participants
-                .map((member) => member.name)
-                .join(", "),
-            }))}
-          />
-        )}
-        {members.value.length === 0 ? (
-          <p className="text-muted">Add a member before adding an expense.</p>
-        ) : (
-          <AddExpenseForm
-            groupId={group.id}
-            currency={group.currency}
-            members={members.value}
-          />
-        )}
-      </section>
+      <ExpensesSection
+        groupId={group.id}
+        currency={group.currency}
+        members={members.value}
+        expenses={expenses.value}
+      />
+      <MembersSection groupId={group.id} members={members.value} />
     </Card>
   );
 }
