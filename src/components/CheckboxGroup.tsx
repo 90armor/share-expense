@@ -38,7 +38,9 @@ export function CheckboxGroup({
       aria-labelledby={legendId}
       aria-describedby={describedBy}
       disabled={disabled}
-      className="flex flex-col gap-1.5"
+      // min-w-0: a fieldset defaults to min-inline-size: min-content, so a
+      // long unbreakable label would make it wider than its container.
+      className="flex min-w-0 flex-col gap-1.5"
     >
       <legend id={legendId} className="mb-1.5 text-sm font-medium text-ink">
         {label}

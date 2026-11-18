@@ -37,7 +37,9 @@ export function RadioGroup({
       aria-describedby={describedBy}
       aria-invalid={error ? true : undefined}
       disabled={disabled}
-      className="flex flex-col gap-1.5"
+      // min-w-0: a fieldset defaults to min-inline-size: min-content, so a
+      // long unbreakable label would make it wider than its container.
+      className="flex min-w-0 flex-col gap-1.5"
     >
       <legend id={legendId} className="mb-1.5 text-sm font-medium text-ink">
         {label}
@@ -57,9 +59,9 @@ export function RadioGroup({
               name={name}
               value={option.value}
               defaultChecked={option.value === defaultValue}
-              className="size-4 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="size-4 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             />
-            {option.label}
+            <span className="min-w-0 break-words">{option.label}</span>
           </label>
         ))}
       </div>
