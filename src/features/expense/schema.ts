@@ -1,12 +1,7 @@
 import { z } from "zod";
 import type { CurrencyCode } from "@/lib/currency";
-import {
-  AMOUNT_MAX_MINOR_UNITS,
-  DESCRIPTION_MAX_LENGTH,
-  PARTICIPANTS_MAX,
-} from "@/lib/limits";
-import { formatAmount } from "@/lib/money";
-import { idSchema, moneyAmountSchema } from "@/lib/validation";
+import { DESCRIPTION_MAX_LENGTH, PARTICIPANTS_MAX } from "@/lib/limits";
+import { idSchema, positiveAmountSchema } from "@/lib/validation";
 
 /** Step 1: only the group id, so the service can load the group's currency. */
 export const addExpenseGroupSchema = z.object({ groupId: idSchema });
@@ -51,12 +46,7 @@ export function addExpenseSchema(currency: CurrencyCode) {
   return z.object({
     groupId: idSchema,
     payerId: z.uuidv4("Choose who paid"),
-    amount: moneyAmountSchema(currency)
-      .refine((money) => money.amount > 0n, "Amount must be more than 0")
-      .refine(
-        (money) => money.amount <= AMOUNT_MAX_MINOR_UNITS,
-        `Amount must be at most ${formatAmount({ amount: AMOUNT_MAX_MINOR_UNITS, currency })}`,
-      ),
+    amount: positiveAmountSchema(currency),
     description: descriptionSchema,
     participantIds: participantIdsSchema,
   });

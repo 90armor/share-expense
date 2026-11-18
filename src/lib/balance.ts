@@ -27,25 +27,33 @@ export type Transfer = Readonly<{
 
 /**
  * Net per member: the payer is credited the full amount and every participant
- * is debited their `splitEqually` share, so the nets always sum to 0.
+ * is debited their `splitEqually` share. A recorded settlement (a payment made,
+ * same shape as a `Transfer`) credits `fromId` (who paid) and debits `toId`
+ * (who received) by its amount. Every expense and settlement adds as much as
+ * it takes, so the nets always sum to 0.
  *
- * Returns one entry per id that appears in an expense (payer or participant),
- * including nets of 0, sorted by id (code-unit order). Members with no
- * expenses are not known here; the caller shows them as 0.
+ * Returns one entry per id that appears in an expense (payer or participant)
+ * or a settlement, including nets of 0, sorted by id (code-unit order).
+ * Members with neither are not known here; the caller shows them as 0.
  *
- * Throws on mixed currencies; an empty or duplicate participant list or a
- * negative amount throws from `splitEqually`. Callers pass validated
- * expenses, so these are programmer bugs, not user input.
+ * Throws on mixed currencies (across all expenses and settlements); an empty
+ * or duplicate participant list or a negative expense amount throws from
+ * `splitEqually`; a negative settlement amount or a settlement from a member
+ * to the same member throws here. Callers pass validated data, so these are
+ * programmer bugs, not user input. A zero amount is allowed and moves nothing.
  */
 export function computeNetBalances(
   expenses: readonly BalanceExpense[],
+  settlements: readonly Transfer[] = [],
 ): NetBalance[] {
   const nets = new Map<string, Money>();
   const netOf = (id: string, currency: Money["currency"]): Money =>
     nets.get(id) ?? { amount: 0n, currency };
+  // Only read inside the loops below, so at least one of the two exists.
+  const reference = (expenses[0]?.amount ?? settlements[0]?.amount)!;
 
   for (const { payerId, amount, participantIds } of expenses) {
-    assertSameCurrency(expenses[0].amount, amount);
+    assertSameCurrency(reference, amount);
     const shares = splitEqually(amount, participantIds);
     nets.set(payerId, addMoney(netOf(payerId, amount.currency), amount));
     for (const { participantId, share } of shares) {
@@ -54,6 +62,19 @@ export function computeNetBalances(
         subtractMoney(netOf(participantId, amount.currency), share),
       );
     }
+  }
+
+  for (const { fromId, toId, amount } of settlements) {
+    assertSameCurrency(reference, amount);
+    if (amount.amount < 0n) {
+      throw new Error("Settlement amount cannot be negative");
+    }
+    if (fromId === toId) {
+      throw new Error(`Settlement from and to the same member: ${fromId}`);
+    }
+    // Paying a debt raises the payer's net and lowers the receiver's.
+    nets.set(fromId, addMoney(netOf(fromId, amount.currency), amount));
+    nets.set(toId, subtractMoney(netOf(toId, amount.currency), amount));
   }
 
   return [...nets.keys()]

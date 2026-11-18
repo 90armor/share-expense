@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { appError } from "./appError";
 import { CURRENCY_CODES, type CurrencyCode } from "./currency";
-import { NAME_MAX_LENGTH } from "./limits";
-import { parseAmount } from "./money";
+import { AMOUNT_MAX_MINOR_UNITS, NAME_MAX_LENGTH } from "./limits";
+import { formatAmount, parseAmount } from "./money";
 import { fail, ok, type Result } from "./result";
 
 export const nameSchema = z
@@ -32,6 +32,19 @@ export function moneyAmountSchema(currency: CurrencyCode) {
     }
     return result.value;
   });
+}
+
+/**
+ * An amount that moves money (expense, settlement): `moneyAmountSchema`, then
+ * more than 0 and at most `AMOUNT_MAX_MINOR_UNITS` (see limits.ts).
+ */
+export function positiveAmountSchema(currency: CurrencyCode) {
+  return moneyAmountSchema(currency)
+    .refine((money) => money.amount > 0n, "Amount must be more than 0")
+    .refine(
+      (money) => money.amount <= AMOUNT_MAX_MINOR_UNITS,
+      `Amount must be at most ${formatAmount({ amount: AMOUNT_MAX_MINOR_UNITS, currency })}`,
+    );
 }
 
 const ROOT_FIELD = "_root";

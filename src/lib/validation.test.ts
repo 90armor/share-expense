@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { NAME_MAX_LENGTH } from "./limits";
+import { AMOUNT_MAX_MINOR_UNITS, NAME_MAX_LENGTH } from "./limits";
 import {
   currencyCodeSchema,
   idSchema,
   moneyAmountSchema,
   nameSchema,
   parseWith,
+  positiveAmountSchema,
 } from "./validation";
 
 describe("nameSchema", () => {
@@ -97,6 +98,53 @@ describe("moneyAmountSchema", () => {
       }
     },
   );
+});
+
+describe("positiveAmountSchema (amount > 0 and at most AMOUNT_MAX_MINOR_UNITS)", () => {
+  it("the cap is the value these messages were written for", () => {
+    expect(AMOUNT_MAX_MINOR_UNITS).toBe(999_999_999_999n);
+  });
+
+  it.each([
+    ["0.01", 1n],
+    ["1,234.50", 123450n],
+    ["631,192", 63119200n],
+    ["9,999,999,999.99", AMOUNT_MAX_MINOR_UNITS],
+  ])("accepts %j", (input, minor) => {
+    expect(parseWith(positiveAmountSchema("MMK"), input)).toEqual({
+      ok: true,
+      value: { amount: minor, currency: "MMK" },
+    });
+  });
+
+  it("keeps the currency it was built with", () => {
+    expect(parseWith(positiveAmountSchema("KHR"), "5")).toEqual({
+      ok: true,
+      value: { amount: 500n, currency: "KHR" },
+    });
+  });
+
+  it.each([
+    ["0", "Amount must be more than 0"],
+    ["0.00", "Amount must be more than 0"],
+    ["10,000,000,000.00", "Amount must be at most 9,999,999,999.99"],
+    ["9,999,999,999.991", "At most 2 decimal places"],
+    ["92,233,720,368,547,758.07", "Amount must be at most 9,999,999,999.99"],
+    // parseAmount's messages pass through unchanged.
+    ["", "Amount is required"],
+    ["-1", "Amount cannot be negative"],
+    ["abc", "Enter a valid amount, e.g. 1,234.50"],
+    [100, "Amount must be text"],
+  ])("rejects %j with %j", (input, message) => {
+    expect(parseWith(positiveAmountSchema("USD"), input)).toEqual({
+      ok: false,
+      error: {
+        code: "VALIDATION",
+        message: "Invalid input",
+        fields: { _root: message },
+      },
+    });
+  });
 });
 
 describe("parseWith field map", () => {
