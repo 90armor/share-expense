@@ -79,7 +79,7 @@ The container runs as uid 1001 and SQLite needs a writable `/app/data` directory
 - [x] .claude/settings.json — permission guardrails (.env deny, read-only git allow)
 - [x] Phase 1 — Next.js + TypeScript scaffold, Prisma + SQLite, Tailwind, Vitest, ESLint/Prettier, GitHub Actions CI
 - [x] Phase 2 — design system, shared lib, DB foundation, create-group slice (PRs #9–#11)
-- [ ] Phase 3 — MVP features
+- [x] Phase 3 — MVP features
   - [x] Create group
   - [x] Member add/remove
   - [x] Add expense
