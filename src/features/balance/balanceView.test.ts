@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Expense, ExpenseMember } from "@/features/expense/service";
+import type { Settlement } from "@/features/settlement/service";
 import type { Money } from "@/lib/money";
 import {
   toBalanceView,
@@ -45,12 +46,29 @@ const EXAMPLE_1 = expense(AUNG, usd(10001n), [AUNG, BO_BO, CHIT]);
 // Example 2 adds: b pays 3000 for a, b.
 const EXAMPLE_2 = expense(BO_BO, usd(3000n), [AUNG, BO_BO]);
 
+let settlementCount = 0;
+/** A recorded payment: `from` paid `to` `amount`. */
+function settlement(
+  from: ExpenseMember,
+  to: ExpenseMember,
+  amount: Money,
+): Settlement {
+  settlementCount++;
+  return {
+    id: `9c0d1e2f-3a4b-4c5d-8e6f-${settlementCount.toString().padStart(12, "0")}`,
+    fromId: from.id,
+    toId: to.id,
+    amount,
+  };
+}
+
 function run(input: Partial<BalanceViewInput>) {
   return toBalanceView({
     groupId: GROUP_ID,
     currency: "USD",
     members: [AUNG, BO_BO, CHIT, DAW],
     expenses: [],
+    settlements: [],
     ...input,
   });
 }
@@ -154,6 +172,80 @@ describe("toBalanceView: members", () => {
   });
 });
 
+describe("toBalanceView: settlements (from is credited, to is debited)", () => {
+  // Example 1 alone: Aung +6667, Bo Bo -3334, Chit -3333, Daw 0.
+
+  it("Bo Bo pays Aung the full 33.34: Bo Bo is settled up, only Chit -> Aung is left", () => {
+    expect(
+      view({
+        expenses: [EXAMPLE_1],
+        settlements: [settlement(BO_BO, AUNG, usd(3334n))],
+      }),
+    ).toEqual({
+      hasExpenses: true,
+      members: [
+        { ...AUNG, net: usd(3333n) },
+        { ...BO_BO, net: usd(0n) },
+        { ...CHIT, net: usd(-3333n) },
+        { ...DAW, net: usd(0n) },
+      ],
+      transfers: [{ from: CHIT, to: AUNG, amount: usd(3333n) }],
+    });
+  });
+
+  it("both pay in full: every net is 0 and no transfers, but hasExpenses stays true", () => {
+    const v = view({
+      expenses: [EXAMPLE_1],
+      settlements: [
+        settlement(BO_BO, AUNG, usd(3334n)),
+        settlement(CHIT, AUNG, usd(3333n)),
+      ],
+    });
+    expect(v.hasExpenses).toBe(true);
+    expect(memberNets(v)).toEqual([
+      ["Aung", 0n],
+      ["Bo Bo", 0n],
+      ["Chit", 0n],
+      ["Daw", 0n],
+    ]);
+    expect(v.transfers).toEqual([]);
+  });
+
+  it("direction: Aung pays Bo Bo 10.00 (1000 minor units), so Aung is owed more and Bo Bo owes more", () => {
+    // Aung: +6667 + 1000 = +7667; Bo Bo: -3334 - 1000 = -4334; Chit -3333.
+    // Greedy: Bo Bo owes most -> Bo Bo -> Aung 4334; then Chit -> Aung 3333.
+    const v = view({
+      expenses: [EXAMPLE_1],
+      settlements: [settlement(AUNG, BO_BO, usd(1000n))],
+    });
+    expect(memberNets(v)).toEqual([
+      ["Aung", 7667n],
+      ["Bo Bo", -4334n],
+      ["Chit", -3333n],
+      ["Daw", 0n],
+    ]);
+    expect(transferTriples(v)).toEqual([
+      ["Bo Bo", "Aung", 4334n],
+      ["Chit", "Aung", 3333n],
+    ]);
+  });
+
+  it("the order of settlements does not matter", () => {
+    const first = settlement(BO_BO, AUNG, usd(1000n));
+    const second = settlement(CHIT, DAW, usd(250n));
+    const a = view({ expenses: [EXAMPLE_1], settlements: [first, second] });
+    const b = view({ expenses: [EXAMPLE_1], settlements: [second, first] });
+    expect(a).toEqual(b);
+    // Aung +6667 - 1000; Bo Bo -3334 + 1000; Chit -3333 + 250; Daw -250. Sum 0.
+    expect(memberNets(a)).toEqual([
+      ["Aung", 5667n],
+      ["Bo Bo", -2334n],
+      ["Chit", -3083n],
+      ["Daw", -250n],
+    ]);
+  });
+});
+
 describe("toBalanceView: corrupt data returns UNEXPECTED (never throws) and logs", () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -184,6 +276,35 @@ describe("toBalanceView: corrupt data returns UNEXPECTED (never throws) and logs
     ],
   ])("%s", (_, expenses) => {
     const result = run({ expenses });
+
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "UNEXPECTED",
+        message: "Something went wrong. Please try again.",
+      },
+    });
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^\[balance\] .*group 6f1c2b3a-/),
+      expect.any(Error),
+    );
+  });
+
+  it.each([
+    [
+      "a settlement from a member missing from the members list",
+      () => [settlement(OUTSIDER, AUNG, usd(100n))],
+    ],
+    [
+      "a settlement to a member missing from the members list",
+      () => [settlement(BO_BO, OUTSIDER, usd(100n))],
+    ],
+    [
+      "a settlement in another currency than the group",
+      () => [settlement(BO_BO, AUNG, { amount: 100n, currency: "MMK" })],
+    ],
+  ])("%s", (_, settlements) => {
+    const result = run({ expenses: [EXAMPLE_1], settlements: settlements() });
 
     expect(result).toEqual({
       ok: false,

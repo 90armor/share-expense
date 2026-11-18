@@ -9,6 +9,7 @@ import { listExpenses } from "@/features/expense/service";
 import { getGroup } from "@/features/group/service";
 import { MembersSection } from "@/features/member/MembersSection";
 import { listMembers } from "@/features/member/service";
+import { listSettlements } from "@/features/settlement/service";
 import { getDb } from "@/server/db";
 
 export const metadata: Metadata = { title: "Group" };
@@ -54,12 +55,15 @@ async function GroupDetails({
   }
 
   const group = result.value;
-  // Expenses first, then members: every member id in a loaded expense is then
-  // in the member list, because a member with expenses can't be removed (FK
-  // Restrict). The balance relies on this; an unknown id means corrupt data.
+  // Expenses, then settlements, then members: every member id in a loaded
+  // expense or settlement is then in the member list, because a member with
+  // expenses or settlements can't be removed (FK Restrict). The balance relies
+  // on this; an unknown id means corrupt data.
   // The group exists and its id is valid, so any failure here is UNEXPECTED (logged).
   const expenses = await listExpenses(getDb(), group.id);
   if (!expenses.ok) throw new Error("Could not load expenses");
+  const settlements = await listSettlements(getDb(), group.id);
+  if (!settlements.ok) throw new Error("Could not load settlements");
   const members = await listMembers(getDb(), group.id);
   if (!members.ok) throw new Error("Could not load members");
   // Derived from the rows above (no second query), so it matches the table.
@@ -68,6 +72,7 @@ async function GroupDetails({
     currency: group.currency,
     members: members.value,
     expenses: expenses.value,
+    settlements: settlements.value,
   });
   // Corrupt data: toBalanceView logged it; the error boundary shows a generic page.
   if (!balance.ok) throw new Error("Could not load balance");
@@ -83,7 +88,7 @@ async function GroupDetails({
           <dd className="font-medium">{group.currency}</dd>
         </dl>
       </div>
-      <BalanceSection view={balance.value} />
+      <BalanceSection groupId={group.id} view={balance.value} />
       <ExpensesSection
         groupId={group.id}
         currency={group.currency}
