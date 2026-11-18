@@ -27,6 +27,13 @@ function attr(html: string, name: string): string | undefined {
   return html.match(new RegExp(`${name}="([^"]*)"`))?.[1];
 }
 
+function classes(tag: string): string[] {
+  return attr(tag, "class")?.split(/\s+/) ?? [];
+}
+
+// A member name can be 100 characters with no spaces.
+const LONG = "x".repeat(100);
+
 describe("RadioGroup", () => {
   it("renders a fieldset whose legend is the label", () => {
     const html = render();
@@ -82,6 +89,31 @@ describe("RadioGroup", () => {
     expect(html).toMatch(/^<fieldset[^>]*aria-invalid="true"/);
     for (const input of radios(html)) {
       expect(input).not.toContain("aria-invalid");
+    }
+  });
+
+  // Node can only check classes; these do not prove the layout (checked in the
+  // browser). A fieldset defaults to min-inline-size: min-content, so without
+  // min-w-0 it grows to the longest unbreakable label.
+  it("lets the fieldset shrink below its widest option (min-w-0)", () => {
+    const fieldset = render().match(/^<fieldset[^>]*>/)?.[0] ?? "";
+    expect(classes(fieldset)).toContain("min-w-0");
+  });
+
+  it("wraps a long option label: text in a min-w-0 break-words span, input shrink-0", () => {
+    const html = render({
+      options: [
+        { value: "a", label: LONG },
+        { value: "b", label: "Bo Bo" },
+      ],
+    });
+    const span = html.match(new RegExp(`<span[^>]*>${LONG}</span>`))?.[0];
+    expect(span, "label text is in its own span").toBeDefined();
+    expect(classes(span ?? "")).toEqual(
+      expect.arrayContaining(["min-w-0", "break-words"]),
+    );
+    for (const input of radios(html)) {
+      expect(classes(input)).toContain("shrink-0");
     }
   });
 

@@ -89,6 +89,14 @@ describe("CheckboxGroup", () => {
     expect(html).not.toContain("aria-invalid");
   });
 
+  // Node can only check classes; this does not prove the layout (checked in the
+  // browser). A fieldset defaults to min-inline-size: min-content, so without
+  // min-w-0 it grows to the longest unbreakable label.
+  it("lets the fieldset shrink below its widest option (min-w-0)", () => {
+    const fieldset = render().match(/^<fieldset[^>]*>/)?.[0] ?? "";
+    expect(attr(fieldset, "class")?.split(/\s+/)).toContain("min-w-0");
+  });
+
   it("disables the whole group", () => {
     expect(render({ disabled: true })).toMatch(/^<fieldset[^>]*disabled=""/);
   });
