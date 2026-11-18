@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Card } from "@/components/Card";
+import { BalanceSection } from "@/features/balance/BalanceSection";
+import { toBalanceView } from "@/features/balance/balanceView";
 import { ExpensesSection } from "@/features/expense/ExpensesSection";
 import { listExpenses } from "@/features/expense/service";
 import { getGroup } from "@/features/group/service";
@@ -52,14 +54,26 @@ async function GroupDetails({
   }
 
   const group = result.value;
-  const members = await listMembers(getDb(), group.id);
+  // Expenses first, then members: every member id in a loaded expense is then
+  // in the member list, because a member with expenses can't be removed (FK
+  // Restrict). The balance relies on this; an unknown id means corrupt data.
   // The group exists and its id is valid, so any failure here is UNEXPECTED (logged).
-  if (!members.ok) throw new Error("Could not load members");
   const expenses = await listExpenses(getDb(), group.id);
   if (!expenses.ok) throw new Error("Could not load expenses");
+  const members = await listMembers(getDb(), group.id);
+  if (!members.ok) throw new Error("Could not load members");
+  // Derived from the rows above (no second query), so it matches the table.
+  const balance = toBalanceView({
+    groupId: group.id,
+    currency: group.currency,
+    members: members.value,
+    expenses: expenses.value,
+  });
+  // Corrupt data: toBalanceView logged it; the error boundary shows a generic page.
+  if (!balance.ok) throw new Error("Could not load balance");
 
-  // Order: the list is the focus. Balance (next feature) goes above Expenses.
-  // Members sit below; ExpensesSection's empty text says "below" (keep in sync).
+  // Order: Balance (the answer) above Expenses (the list). Members sit below;
+  // ExpensesSection's empty text says "below" (keep in sync).
   return (
     <Card className="flex w-full max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-4">
@@ -69,6 +83,7 @@ async function GroupDetails({
           <dd className="font-medium">{group.currency}</dd>
         </dl>
       </div>
+      <BalanceSection view={balance.value} />
       <ExpensesSection
         groupId={group.id}
         currency={group.currency}

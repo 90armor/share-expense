@@ -82,6 +82,6 @@ The container runs as uid 1001 and SQLite needs a writable `/app/data` directory
 - [ ] Phase 3 — MVP features
   - [x] Create group
   - [x] Member add/remove
-  - [ ] Add expense
-  - [ ] View balance
+  - [x] Add expense
+  - [x] View balance
   - [ ] Settle
