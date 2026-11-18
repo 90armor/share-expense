@@ -18,6 +18,13 @@ const expense = (
   participantIds: readonly string[],
 ): BalanceExpense => ({ payerId, amount, participantIds });
 
+/** A recorded settlement: `fromId` paid `toId` `amount`. */
+const settle = (fromId: string, toId: string, amount: Money): Transfer => ({
+  fromId,
+  toId,
+  amount,
+});
+
 /** Builds nets from [memberId, minor units] pairs. */
 const netsOf = (
   pairs: readonly (readonly [string, bigint])[],
@@ -179,11 +186,24 @@ function shuffled<T>(items: readonly T[], random: () => number): T[] {
 
 const CURRENCIES: readonly CurrencyCode[] = ["MMK", "USD", "KHR"];
 
+type GeneratedGroup = {
+  expenses: BalanceExpense[];
+  settlements: Transfer[];
+};
+
 function generateGroup(
   random: () => number,
   currency: CurrencyCode,
-): BalanceExpense[] {
+): GeneratedGroup {
   const int = (max: number) => Math.floor(random() * max);
+  const randomAmount = () => {
+    const roll = random();
+    return roll < 0.1
+      ? AMOUNT_MAX_MINOR_UNITS
+      : roll < 0.15
+        ? 0n
+        : BigInt(int(20_001));
+  };
   // Random hex ids, so code-unit order is not the creation order.
   const ids = new Set<string>();
   const memberCount = 1 + int(8);
@@ -193,14 +213,8 @@ function generateGroup(
   const members = [...ids];
 
   const expenseCount = int(9);
-  return Array.from({ length: expenseCount }, () => {
-    const roll = random();
-    const amount =
-      roll < 0.1
-        ? AMOUNT_MAX_MINOR_UNITS
-        : roll < 0.15
-          ? 0n
-          : BigInt(int(20_001));
+  const expenses = Array.from({ length: expenseCount }, () => {
+    const amount = randomAmount();
     let participantIds = members.filter(() => random() < 0.5);
     if (participantIds.length === 0)
       participantIds = [members[int(members.length)]];
@@ -210,20 +224,34 @@ function generateGroup(
       participantIds,
     );
   });
+
+  // 0-4 settlements between two different members (none with one member).
+  const settlementCount = members.length < 2 ? 0 : int(5);
+  const settlements = Array.from({ length: settlementCount }, () => {
+    const fromIndex = int(members.length);
+    const toIndex = (fromIndex + 1 + int(members.length - 1)) % members.length;
+    return settle(members[fromIndex], members[toIndex], {
+      amount: randomAmount(),
+      currency,
+    });
+  });
+
+  return { expenses, settlements };
 }
 
 /** Checks every rule for one group; returns the transfers. */
 function expectValidBalances(
-  expenses: readonly BalanceExpense[],
+  { expenses, settlements }: GeneratedGroup,
   currency: CurrencyCode,
   random: () => number,
 ): Transfer[] {
-  const nets = computeNetBalances(expenses);
+  const nets = computeNetBalances(expenses, settlements);
 
-  // One entry per id that appears in an expense, sorted by id (code units).
-  const appearing = new Set(
-    expenses.flatMap((e) => [e.payerId, ...e.participantIds]),
-  );
+  // One entry per id that appears in an expense or a settlement, sorted by id (code units).
+  const appearing = new Set([
+    ...expenses.flatMap((e) => [e.payerId, ...e.participantIds]),
+    ...settlements.flatMap((s) => [s.fromId, s.toId]),
+  ]);
   const ids = nets.map((n) => n.memberId);
   expect(new Set(ids)).toEqual(appearing);
   expect(ids).toEqual(
@@ -257,11 +285,13 @@ function expectValidBalances(
   // Applying the transfers zeroes every net.
   for (const amount of remaining.values()) expect(amount).toBe(0n);
 
-  // Same result for any order of expenses, participant ids and nets.
+  // Same result for any order of expenses, participant ids, settlements and nets.
   const reordered = shuffled(expenses, random).map((e) =>
     expense(e.payerId, e.amount, shuffled(e.participantIds, random)),
   );
-  expect(computeNetBalances(reordered)).toEqual(nets);
+  expect(computeNetBalances(reordered, shuffled(settlements, random))).toEqual(
+    nets,
+  );
   expect(computeTransfers(shuffled(nets, random))).toEqual(transfers);
 
   return transfers;
@@ -273,19 +303,19 @@ describe("invariants over generated groups", () => {
     const GROUPS = 600;
     let checked = 0;
     let withTransfers = 0;
+    let withSettlements = 0;
     for (let i = 0; i < GROUPS; i++) {
       const currency = CURRENCIES[i % CURRENCIES.length];
-      const transfers = expectValidBalances(
-        generateGroup(random, currency),
-        currency,
-        random,
-      );
+      const group = generateGroup(random, currency);
+      const transfers = expectValidBalances(group, currency, random);
       if (transfers.length > 0) withTransfers++;
+      if (group.settlements.length > 0) withSettlements++;
       checked++;
     }
     // Guards against the loop silently running zero times or only trivial groups.
     expect(checked).toBe(GROUPS);
     expect(withTransfers).toBeGreaterThan(GROUPS / 2);
+    expect(withSettlements).toBeGreaterThan(GROUPS / 2);
   });
 });
 
@@ -458,7 +488,164 @@ describe("currencies", () => {
   );
 });
 
+describe("settlements: from is credited, to is debited", () => {
+  // Example 1: a pays 10001 for a, b, c -> a +6667, b -3334, c -3333.
+  const expense1 = expense("a", usd(10001n), ["a", "b", "c"]);
+
+  it("b pays a the full suggested 3334: b is settled, only c -> a is left", () => {
+    const nets = computeNetBalances([expense1], [settle("b", "a", usd(3334n))]);
+    expect(nets).toEqual(
+      netsOf([
+        ["a", 3333n],
+        ["b", 0n],
+        ["c", -3333n],
+      ]),
+    );
+    expect(computeTransfers(nets)).toEqual([
+      { fromId: "c", toId: "a", amount: usd(3333n) },
+    ]);
+  });
+
+  it("b and c both pay in full: every net is 0, no transfers", () => {
+    const nets = computeNetBalances(
+      [expense1],
+      [settle("b", "a", usd(3334n)), settle("c", "a", usd(3333n))],
+    );
+    expect(netPairs(nets)).toEqual([
+      ["a", 0n],
+      ["b", 0n],
+      ["c", 0n],
+    ]);
+    expect(computeTransfers(nets)).toEqual([]);
+  });
+
+  it("partial: b pays a 1000 of 3334", () => {
+    // a: 6667 - 1000 = 5667; b: -3334 + 1000 = -2334; c: -3333.
+    // Greedy: c owes most (3333) -> c -> a 3333; then b -> a 2334.
+    const nets = computeNetBalances([expense1], [settle("b", "a", usd(1000n))]);
+    expect(netPairs(nets)).toEqual([
+      ["a", 5667n],
+      ["b", -2334n],
+      ["c", -3333n],
+    ]);
+    expect(transferTriples(computeTransfers(nets))).toEqual([
+      ["c", "a", 3333n],
+      ["b", "a", 2334n],
+    ]);
+  });
+
+  it("over-payment: b pays a 5000, so a now owes b the extra 1666", () => {
+    // a: 6667 - 5000 = 1667; b: -3334 + 5000 = +1666; c: -3333.
+    // Greedy: c -> a 1667 (a is owed more than b), then c -> b 1666.
+    const nets = computeNetBalances([expense1], [settle("b", "a", usd(5000n))]);
+    expect(netPairs(nets)).toEqual([
+      ["a", 1667n],
+      ["b", 1666n],
+      ["c", -3333n],
+    ]);
+    expect(transferTriples(computeTransfers(nets))).toEqual([
+      ["c", "a", 1667n],
+      ["c", "b", 1666n],
+    ]);
+  });
+
+  it("an id that appears only in a settlement gets an entry", () => {
+    const nets = computeNetBalances([], [settle("x", "y", usd(100n))]);
+    expect(netPairs(nets)).toEqual([
+      ["x", 100n],
+      ["y", -100n],
+    ]);
+    expect(transferTriples(computeTransfers(nets))).toEqual([["y", "x", 100n]]);
+  });
+
+  it("a member with no expenses who only received a settlement now owes it", () => {
+    // d is in no expense; b pays d 500 by mistake: b +500 against the debt, d -500.
+    const nets = computeNetBalances([expense1], [settle("b", "d", usd(500n))]);
+    expect(netPairs(nets)).toEqual([
+      ["a", 6667n],
+      ["b", -2834n],
+      ["c", -3333n],
+      ["d", -500n],
+    ]);
+  });
+
+  it("the order of settlements does not matter", () => {
+    const settlements = [
+      settle("b", "a", usd(1000n)),
+      settle("c", "a", usd(500n)),
+      settle("b", "c", usd(7n)),
+    ];
+    const expected = computeNetBalances([expense1], settlements);
+    expect(netPairs(expected)).toEqual([
+      ["a", 5167n],
+      ["b", -2327n],
+      ["c", -2840n],
+    ]);
+    for (const order of permutations(settlements)) {
+      expect(computeNetBalances([expense1], order)).toEqual(expected);
+    }
+  });
+
+  it("a zero settlement moves no money but lists its members", () => {
+    const nets = computeNetBalances([], [settle("a", "b", usd(0n))]);
+    expect(netPairs(nets)).toEqual([
+      ["a", 0n],
+      ["b", 0n],
+    ]);
+    expect(computeTransfers(nets)).toEqual([]);
+  });
+
+  it("keeps the currency of the settlements when there are no expenses (MMK)", () => {
+    const nets = computeNetBalances(
+      [],
+      [settle("a", "b", { amount: 63119200n, currency: "MMK" })],
+    );
+    expect(nets).toEqual(
+      netsOf(
+        [
+          ["a", 63119200n],
+          ["b", -63119200n],
+        ],
+        "MMK",
+      ),
+    );
+  });
+});
+
 describe("invalid input throws", () => {
+  it("a settlement in another currency than the expenses", () => {
+    expect(() =>
+      computeNetBalances(
+        [expense("a", usd(100n), ["a", "b"])],
+        [settle("b", "a", { amount: 50n, currency: "MMK" })],
+      ),
+    ).toThrow("Currency mismatch: USD vs MMK");
+  });
+
+  it("settlements in different currencies (no expenses)", () => {
+    expect(() =>
+      computeNetBalances(
+        [],
+        [
+          settle("b", "a", usd(1n)),
+          settle("c", "a", { amount: 1n, currency: "MMK" }),
+        ],
+      ),
+    ).toThrow("Currency mismatch: USD vs MMK");
+  });
+
+  it("a negative settlement amount", () => {
+    expect(() => computeNetBalances([], [settle("b", "a", usd(-1n))])).toThrow(
+      "Settlement amount cannot be negative",
+    );
+  });
+
+  it("a settlement from a member to the same member", () => {
+    expect(() => computeNetBalances([], [settle("a", "a", usd(100n))])).toThrow(
+      "Settlement from and to the same member: a",
+    );
+  });
+
   it("expenses in different currencies", () => {
     expect(() =>
       computeNetBalances([
@@ -531,5 +718,17 @@ describe("does not mutate its input", () => {
     computeTransfers(nets);
     expect(netPairs(nets)).toEqual(before);
     expect(expenses[0].participantIds).toEqual(["c", "a", "b"]);
+  });
+
+  it("leaves frozen settlements untouched", () => {
+    const settlements = Object.freeze([
+      Object.freeze(settle("b", "a", Object.freeze(usd(1000n)))),
+      Object.freeze(settle("c", "a", Object.freeze(usd(500n)))),
+    ]);
+    computeNetBalances([], settlements);
+    expect(settlements).toEqual([
+      settle("b", "a", usd(1000n)),
+      settle("c", "a", usd(500n)),
+    ]);
   });
 });
