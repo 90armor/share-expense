@@ -84,4 +84,4 @@ The container runs as uid 1001 and SQLite needs a writable `/app/data` directory
   - [x] Member add/remove
   - [x] Add expense
   - [x] View balance
-  - [ ] Settle
+  - [x] Settle

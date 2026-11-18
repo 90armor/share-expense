@@ -1,3 +1,4 @@
+import { SettleForm } from "@/features/settlement/SettleForm";
 import { cx } from "@/lib/cx";
 import { formatMoney, negate, type Money } from "@/lib/money";
 import type { BalanceView } from "./balanceView";
@@ -6,7 +7,7 @@ export const NO_MEMBERS_TEXT = "Add members and expenses to see who owes whom.";
 export const NO_EXPENSES_TEXT = "No expenses yet, so everyone is settled up.";
 export const ALL_SETTLED_TEXT = "Everyone is settled up. No payments needed.";
 
-export type BalanceSectionProps = { view: BalanceView };
+export type BalanceSectionProps = { groupId: string; view: BalanceView };
 
 /** U+2212, the minus sign (not the ASCII hyphen formatMoney uses). */
 const MINUS = "−";
@@ -32,10 +33,11 @@ function memberStatus(net: Money): { text: string; className: string } {
 }
 
 /**
- * Read-only balance: who pays whom (the answer, in ink), then each member's
- * net (the reason). No actions; settling is a separate feature.
+ * Balance: who pays whom (the answer, in ink), each line with its own
+ * "Mark as paid" button + confirm Modal (SettleForm), then each member's net
+ * (the reason).
  */
-export function BalanceSection({ view }: BalanceSectionProps) {
+export function BalanceSection({ groupId, view }: BalanceSectionProps) {
   return (
     <section aria-labelledby="balance-heading" className="flex flex-col gap-4">
       <h2 id="balance-heading" className="text-lg font-semibold">
@@ -59,14 +61,24 @@ export function BalanceSection({ view }: BalanceSectionProps) {
                 className="flex flex-col gap-1"
               >
                 {view.transfers.map((transfer) => (
+                  // The amount is in the key, so a recomputed line never
+                  // reuses an old line's Modal state.
                   <li
-                    key={`${transfer.from.id}-${transfer.to.id}`}
-                    className="break-words text-ink"
+                    key={`${transfer.from.id}-${transfer.to.id}-${transfer.amount.amount}`}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
                   >
-                    {`${transfer.from.name} pays ${transfer.to.name} `}
-                    <span className="whitespace-nowrap font-medium">
-                      {formatMoney(transfer.amount)}
+                    <span className="min-w-0 break-words text-ink">
+                      {`${transfer.from.name} pays ${transfer.to.name} `}
+                      <span className="whitespace-nowrap font-medium">
+                        {formatMoney(transfer.amount)}
+                      </span>
                     </span>
+                    <SettleForm
+                      groupId={groupId}
+                      from={transfer.from}
+                      to={transfer.to}
+                      amount={transfer.amount}
+                    />
                   </li>
                 ))}
               </ul>

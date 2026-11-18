@@ -43,9 +43,12 @@ function isNameKeyConflict(error: unknown): boolean {
  * True only for a foreign-key violation (P2003) on a Member delete. Shape
  * checked against Prisma 7.10.1 + the better-sqlite3 adapter:
  * meta.modelName "Member", meta.driverAdapterError.cause.kind
- * "ForeignKeyConstraintViolation". SQLite does not name the key, but only
- * Expense.payerId and ExpenseParticipant.memberId reference Member, so this
- * means "paid for or shares an expense".
+ * "ForeignKeyConstraintViolation". SQLite does not name the key. Member is
+ * referenced by Expense.payerId, ExpenseParticipant.memberId,
+ * Settlement.fromId and Settlement.toId, so this means "paid for or shares an
+ * expense, or paid or received a settlement". The CONFLICT message names only
+ * expenses: through the UI, a member in a settlement always has an expense
+ * (docs/decisions.md).
  */
 function isMemberInUse(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
@@ -120,8 +123,9 @@ export async function listMembers(
 /**
  * Deletes the member only if it belongs to `groupId` (one statement, so there
  * is no check-then-delete gap). A member of another group -> NOT_FOUND.
- * A member who paid for or shares an expense -> CONFLICT: the FK (Restrict)
- * refuses the delete, so the DB decides and no expense can slip in between.
+ * A member who paid for or shares an expense, or paid or received a
+ * settlement -> CONFLICT: the FK (Restrict) refuses the delete, so the DB
+ * decides and no expense or settlement can slip in between.
  */
 export async function removeMember(
   db: PrismaClient,

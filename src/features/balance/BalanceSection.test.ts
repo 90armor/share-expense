@@ -56,9 +56,13 @@ const NO_MEMBERS: BalanceView = {
   transfers: [],
 };
 
+const GROUP_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+
 // Server-render to an HTML string: runs in the node test environment, no jsdom.
 const render = (view: BalanceView): string =>
-  renderToStaticMarkup(createElement(BalanceSection, { view }));
+  renderToStaticMarkup(
+    createElement(BalanceSection, { groupId: GROUP_ID, view }),
+  );
 
 const MINUS = "−";
 
@@ -71,16 +75,24 @@ function spanClasses(html: string, text: string): string[] | null {
   return match ? match[1].split(/\s+/) : null;
 }
 
-/** Text of each <li> in the list labelled by `headingId`, tags stripped. */
-function listItems(html: string, headingId: string): string[] {
+/** Inner HTML of each <li> in the list labelled by `headingId`. */
+function listItemsHtml(html: string, headingId: string): string[] {
   const list =
     html.match(
       new RegExp(
         `<ul[^>]*aria-labelledby="${headingId}"[^>]*>([\\s\\S]*?)</ul>`,
       ),
     )?.[1] ?? "";
-  return [...list.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map((m) =>
-    m[1].replace(/<[^>]*>/g, ""),
+  return [...list.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1]);
+}
+
+/**
+ * Text of each <li>, tags stripped. A transfer line's text ends where its
+ * Mark as paid button (and that button's dialog) starts.
+ */
+function listItems(html: string, headingId: string): string[] {
+  return listItemsHtml(html, headingId).map((item) =>
+    item.split("<button")[0].replace(/<[^>]*>/g, ""),
   );
 }
 
@@ -191,19 +203,69 @@ describe("BalanceSection", () => {
     const nameSpan = spanClasses(html, long.name);
     expect(nameSpan).toContain("min-w-0");
     expect(nameSpan).toContain("break-words");
-    const transferLi = html.match(
-      new RegExp(`<li class="([^"]*)">Bo Bo pays ${long.name} `),
+    // The line text sits in its own span so it can wrap next to the button.
+    const transferText = html.match(
+      new RegExp(`<span class="([^"]*)">Bo Bo pays ${long.name} `),
     );
-    expect(transferLi?.[1].split(/\s+/)).toContain("break-words");
+    expect(transferText?.[1].split(/\s+/)).toEqual(
+      expect.arrayContaining(["min-w-0", "break-words"]),
+    );
+    const transferLi = listItemsHtml(html, "balance-transfers-heading");
+    expect(transferLi).toHaveLength(1);
+    expect(
+      html.match(/<li class="([^"]*)"><span class="[^"]*">Bo Bo pays/)?.[1],
+    ).toContain("flex-wrap");
   });
 
-  it("is read-only: no Settle button, no form, no paid state", () => {
-    for (const view of [EXAMPLE_1, ALL_SETTLED, NO_EXPENSES, NO_MEMBERS]) {
+  it("gives each transfer line its own Mark as paid button, carrying that line", () => {
+    const html = render(EXAMPLE_1);
+    const lines = listItemsHtml(html, "balance-transfers-heading");
+    expect(lines).toHaveLength(2);
+
+    const hidden = (line: string, name: string) =>
+      line.match(
+        new RegExp(`<input type="hidden" name="${name}" value="([^"]*)"`),
+      )?.[1];
+    expect(
+      lines.map((line) => ({
+        opener: (line.match(/>Mark as paid<\/button>/g) ?? []).length,
+        groupId: hidden(line, "groupId"),
+        fromId: hidden(line, "fromId"),
+        toId: hidden(line, "toId"),
+        amount: hidden(line, "amount"),
+      })),
+    ).toEqual([
+      // Opener + the dialog's submit button, both "Mark as paid".
+      {
+        opener: 2,
+        groupId: GROUP_ID,
+        fromId: BO_BO.id,
+        toId: AUNG.id,
+        amount: "33.34",
+      },
+      {
+        opener: 2,
+        groupId: GROUP_ID,
+        fromId: CHIT.id,
+        toId: AUNG.id,
+        amount: "33.33",
+      },
+    ]);
+    expect(lines[0]).toContain(
+      'aria-label="Mark as paid: Bo Bo pays Aung USD 33.34"',
+    );
+    expect(lines[1]).toContain(
+      'aria-label="Mark as paid: Chit pays Aung USD 33.33"',
+    );
+  });
+
+  it("has no Mark as paid button, form or dialog when nobody needs to pay", () => {
+    for (const view of [ALL_SETTLED, NO_EXPENSES, NO_MEMBERS]) {
       const html = render(view);
       expect(html).not.toContain("<button");
       expect(html).not.toContain("<form");
-      expect(html).not.toMatch(/\bsettle\b/i);
-      expect(html).not.toMatch(/\bpaid\b/i);
+      expect(html).not.toContain("<dialog");
+      expect(html).not.toMatch(/Mark as paid/);
     }
   });
 });
