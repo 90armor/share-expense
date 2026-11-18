@@ -7,7 +7,7 @@ export type ParticipantShare = Readonly<{
 }>;
 
 /** Plain code-unit order (like `<`), never locale-dependent. */
-function byCodeUnit(a: string, b: string): number {
+export function byCodeUnit(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
