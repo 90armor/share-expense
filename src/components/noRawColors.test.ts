@@ -15,7 +15,7 @@ function findColorViolations(text: string): string[] {
 }
 
 const ROOT = process.cwd();
-const SCAN_DIRS = ["src/components", "src/app"];
+const SCAN_DIRS = ["src/components", "src/app", "src/features"];
 const SKIP_FILES = ["src/app/globals.css"];
 
 function listFiles(dir: string): string[] {
