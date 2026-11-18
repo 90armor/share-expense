@@ -13,25 +13,29 @@ datasource db {
 }
 
 model Group {
-  id        String    @id @default(uuid(4))
-  name      String
-  currency  String
-  createdAt DateTime  @default(now())
-  members   Member[]
-  expenses  Expense[]
+  id          String       @id @default(uuid(4))
+  name        String
+  currency    String
+  createdAt   DateTime     @default(now())
+  members     Member[]
+  expenses    Expense[]
+  settlements Settlement[]
 }
 
 model Member {
-  id             String               @id @default(uuid(4))
-  groupId        String
-  group          Group                @relation(fields: [groupId], references: [id])
-  name           String
+  id                  String               @id @default(uuid(4))
+  groupId             String
+  group               Group                @relation(fields: [groupId], references: [id])
+  name                String
   /// Normalized name (NFC, whitespace collapsed, lowercased), set by the member service only.
-  nameKey        String
-  createdAt      DateTime             @default(now())
-  /// Restrict on both: a member who paid for or shares an expense cannot be removed.
-  paidExpenses   Expense[]            @relation("ExpensePayer")
-  participations ExpenseParticipant[]
+  nameKey             String
+  createdAt           DateTime             @default(now())
+  /// Restrict on all: a member who paid for or shares an expense, or paid or
+  /// received a settlement, cannot be removed.
+  paidExpenses        Expense[]            @relation("ExpensePayer")
+  participations      ExpenseParticipant[]
+  settlementsPaid     Settlement[]         @relation("SettlementFrom")
+  settlementsReceived Settlement[]         @relation("SettlementTo")
 
   @@unique([groupId, nameKey])
 }
@@ -63,4 +67,24 @@ model ExpenseParticipant {
 
   @@id([expenseId, memberId])
   @@index([memberId])
+}
+
+/// A recorded payment: `from` paid `to` `amount`. Immutable (no edit/delete/undo in the MVP).
+model Settlement {
+  id        String   @id @default(uuid(4))
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  /// Who paid (credited in the balance).
+  fromId    String
+  from      Member   @relation("SettlementFrom", fields: [fromId], references: [id], onDelete: Restrict)
+  /// Who received (debited in the balance).
+  toId      String
+  to        Member   @relation("SettlementTo", fields: [toId], references: [id], onDelete: Restrict)
+  /// Minor units (1/100). Currency is the group's, not stored per settlement.
+  amount    BigInt
+  createdAt DateTime @default(now())
+
+  @@index([groupId])
+  @@index([fromId])
+  @@index([toId])
 }

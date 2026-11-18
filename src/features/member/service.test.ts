@@ -384,6 +384,65 @@ describe("member service (temp SQLite with migrations applied)", () => {
       });
     });
 
+    // Settlement -> Member FKs are Restrict too. These members have no
+    // expenses, so only the settlement FK can refuse the delete. The message
+    // is the existing one (SQLite does not say which FK refused).
+    describe("with settlements", () => {
+      const CONFLICT = {
+        ok: false,
+        error: {
+          code: "CONFLICT",
+          message:
+            "This member paid for or shares an expense and can't be removed.",
+        },
+      };
+
+      async function settlement(fromId: string, toId: string) {
+        await testDb.db.settlement.create({
+          data: { groupId: groupA, fromId, toId, amount: 1000n },
+        });
+      }
+
+      it("returns CONFLICT for the payer of a settlement and keeps the member", async () => {
+        const aung = await add(groupA, "Aung");
+        const mya = await add(groupA, "Mya");
+        await settlement(mya.id, aung.id);
+        expect(await testDb.db.expense.count()).toBe(0);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: mya.id }),
+        ).toEqual(CONFLICT);
+        expect(await testDb.db.member.count({ where: { id: mya.id } })).toBe(1);
+        expect(await testDb.db.settlement.count()).toBe(1);
+      });
+
+      it("returns CONFLICT for the receiver of a settlement and keeps the member", async () => {
+        const aung = await add(groupA, "Aung");
+        const mya = await add(groupA, "Mya");
+        await settlement(mya.id, aung.id);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: aung.id }),
+        ).toEqual(CONFLICT);
+        expect(await testDb.db.member.count({ where: { id: aung.id } })).toBe(
+          1,
+        );
+        expect(await testDb.db.settlement.count()).toBe(1);
+      });
+
+      it("still removes a member who is in no settlement", async () => {
+        const aung = await add(groupA, "Aung");
+        const mya = await add(groupA, "Mya");
+        const kyaw = await add(groupA, "Kyaw");
+        await settlement(mya.id, aung.id);
+
+        expect(
+          await removeMember(testDb.db, { groupId: groupA, memberId: kyaw.id }),
+        ).toEqual({ ok: true, value: { id: kyaw.id } });
+        expect(await testDb.db.member.count()).toBe(2);
+      });
+    });
+
     it.each([
       [{ groupId: "not-an-id", memberId: MISSING_ID }, ["groupId"]],
       [{ groupId: MISSING_ID, memberId: "" }, ["memberId"]],
