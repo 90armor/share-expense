@@ -47,3 +47,19 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 ## Security
 
 There is no login, so the id in a URL is the only access control. Ids are UUID v4 (`@default(uuid(4))`, `idSchema = z.uuidv4()`). Never use sequential or time-ordered ids (autoincrement, cuid v1, uuid v1/v7) for anything reachable by URL.
+
+## Final report
+
+The reviewer sees only the final message you paste. Put everything the prompt or plan asked them to see in that FINAL message, not only in mid-work updates.
+
+The final report must contain:
+
+1. A checklist of every requested item and where it lives (file or location).
+2. The first failing test output from the stubs: assertion failures, not "cannot find module".
+3. The full code of new pure logic (services, `src/lib` functions), plus short snippets for anything the plan flagged.
+4. Side effects outside the repo: pushes, PRs, Docker containers, images, volumes, databases or ports you touched, including the user's own dev environment.
+5. What you could NOT verify.
+
+For a new rule or safety check, show it can fail (mutation check): break the code on purpose, show the tests fail, undo it with an Edit, then show `git diff` is empty. Never undo with `git checkout` or `git restore`.
+
+Before you start a dev server or container, check what already runs on the port and which database it uses. Never write test data into the user's dev database.
