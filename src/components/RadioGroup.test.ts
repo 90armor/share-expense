@@ -31,7 +31,8 @@ function classes(tag: string): string[] {
   return attr(tag, "class")?.split(/\s+/) ?? [];
 }
 
-// A member name can be 100 characters with no spaces.
+// A member name saved before the 40-character limit can be 100 characters
+// with no spaces; existing rows are not shortened.
 const LONG = "x".repeat(100);
 
 describe("RadioGroup", () => {

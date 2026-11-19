@@ -5,7 +5,7 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Modal } from "@/components/Modal";
 import { fieldError } from "@/lib/formState";
-import { NAME_MAX_LENGTH } from "@/lib/limits";
+import { MEMBER_NAME_MAX_LENGTH } from "@/lib/limits";
 import { addMemberAction } from "./actions";
 import { addMemberFormError, initialAddMemberFormState } from "./formState";
 
@@ -63,8 +63,7 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
             name="name"
             autoComplete="off"
             placeholder="Aung Aung"
-            maxLength={NAME_MAX_LENGTH}
-            hint={`Up to ${NAME_MAX_LENGTH} characters`}
+            hint={`Up to ${MEMBER_NAME_MAX_LENGTH} characters`}
             defaultValue={state.values.name}
             error={fieldError(state, "name")}
           />

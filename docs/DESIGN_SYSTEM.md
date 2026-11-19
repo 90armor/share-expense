@@ -11,7 +11,7 @@ Tokens live in `src/app/globals.css` (`@theme`). Components live in `src/compone
 - Touch targets are at least 44px (`min-h-11`). Every interactive element shows a focus ring: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`.
 - Light mode only for now. Names are semantic so dark mode can redefine the same tokens later.
 - Join classes with `cx` from `src/lib/cx.ts`.
-- Long text (a member name can be 100 characters with no spaces) goes in a `min-w-0 break-words` element. A `<fieldset>` also needs `min-w-0`: its browser default is `min-inline-size: min-content`, and `break-words` does not lower min-content.
+- Long text (a description can be 100 characters with no spaces; new names are capped at 40/60, but older rows can still hold 100) goes in a `min-w-0 break-words` element. A `<fieldset>` also needs `min-w-0`: its browser default is `min-inline-size: min-content`, and `break-words` does not lower min-content.
 
 ## Color tokens
 

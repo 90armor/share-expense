@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { NAME_MAX_LENGTH } from "@/lib/limits";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  MEMBER_NAME_MAX_LENGTH as MAX,
+  NAME_MAX_CODE_UNITS_PER_CHAR,
+} from "@/lib/limits";
 import { parseWith } from "@/lib/validation";
 import { addMemberSchema, memberNameKey, removeMemberSchema } from "./schema";
 
@@ -23,11 +26,55 @@ describe("addMemberSchema", () => {
     });
   });
 
-  it("accepts a name of exactly the max length", () => {
-    const name = "a".repeat(NAME_MAX_LENGTH);
-    expect(parseWith(addMemberSchema, { groupId: GROUP_ID, name }).ok).toBe(
-      true,
-    );
+  describe("name length (visible characters, max 40)", () => {
+    const TOO_LONG = `Name must be at most ${MAX} characters`;
+    const parse = (name: string) =>
+      parseWith(addMemberSchema, { groupId: GROUP_ID, name });
+    const nameError = (name: string) => {
+      const result = parse(name);
+      return result.ok ? undefined : result.error.fields?.name;
+    };
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("the limit is 40 and the message shows it", () => {
+      // The one literal number: a wrong constant cannot pass silently.
+      expect(nameError("a".repeat(MAX + 1))).toBe(
+        "Name must be at most 40 characters",
+      );
+    });
+
+    it("accepts exactly the max and rejects one more", () => {
+      expect(parse("a".repeat(MAX)).ok).toBe(true);
+      expect(nameError("a".repeat(MAX + 1))).toBe(TOO_LONG);
+    });
+
+    it("counts trimmed text only", () => {
+      expect(parse(`  ${"a".repeat(MAX)}  `).ok).toBe(true);
+    });
+
+    it("counts Burmese by visible character, not code unit", () => {
+      // "ကို" is 3 code units but 1 visible character (grapheme).
+      const name = "ကို".repeat(MAX);
+      expect(name.length).toBeGreaterThan(MAX);
+      expect(parse(name).ok).toBe(true);
+      expect(nameError("ကို".repeat(MAX + 1))).toBe(TOO_LONG);
+    });
+
+    it("rejects one huge grapheme over the code-unit backstop, without segmenting it", () => {
+      const segment = vi.spyOn(Intl.Segmenter.prototype, "segment");
+      // 1 grapheme: "a" plus combining acute accents.
+      const junk = "a" + "\u0301".repeat(MAX * NAME_MAX_CODE_UNITS_PER_CHAR);
+      const result = addMemberSchema.safeParse({
+        groupId: GROUP_ID,
+        name: junk,
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+        TOO_LONG,
+      ]);
+      expect(segment).not.toHaveBeenCalled();
+    });
   });
 
   it("drops a client-sent nameKey (the service computes it)", () => {
@@ -45,7 +92,7 @@ describe("addMemberSchema", () => {
   it.each([
     ["blank", ""],
     ["whitespace-only", "   "],
-    ["too long", "a".repeat(NAME_MAX_LENGTH + 1)],
+    ["too long", "a".repeat(MAX + 1)],
   ])("rejects a %s name with an error on `name` only", (_, name) => {
     const result = parseWith(addMemberSchema, { groupId: GROUP_ID, name });
     expect(result.ok).toBe(false);

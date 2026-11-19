@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { MEMBER_NAME_MAX_LENGTH } from "@/lib/limits";
 import { idSchema, parseWith } from "@/lib/validation";
 import { createTestDb, type TestDb } from "@/server/testDb";
 import { addMember, listMembers, removeMember } from "./service";
@@ -152,7 +153,11 @@ describe("member service (temp SQLite with migrations applied)", () => {
     it.each([
       ["blank name", { name: "" }, ["name"]],
       ["whitespace-only name", { name: "   " }, ["name"]],
-      ["101-char name", { name: "a".repeat(101) }, ["name"]],
+      [
+        "too-long name",
+        { name: "a".repeat(MEMBER_NAME_MAX_LENGTH + 1) },
+        ["name"],
+      ],
       ["missing name", {}, ["name"]],
     ])("rejects a %s and inserts nothing", async (_, input, fields) => {
       const result = await addMember(testDb.db, { groupId: groupA, ...input });

@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { MEMBER_NAME_MAX_LENGTH } from "@/lib/limits";
 import { AddMemberForm } from "./AddMemberForm";
 
 const GROUP_ID = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
@@ -49,6 +50,17 @@ describe("AddMemberForm", () => {
       new RegExp(`<input type="hidden" name="groupId" value="${GROUP_ID}"/>`),
     );
     expect(form).toMatch(/<input[^>]*name="name"/);
+  });
+
+  it("hints the 40-character limit and sets no maxlength on the name", () => {
+    const html = render();
+    expect(html).toContain(`Up to ${MEMBER_NAME_MAX_LENGTH} characters`);
+    expect(html).toContain("Up to 40 characters");
+    // HTML maxlength counts code units, so it would stop a Burmese name early;
+    // the server counts visible characters.
+    expect(tag(html, /<input[^>]*name="name"[^>]*>/)).not.toMatch(
+      /\smaxlength=/i,
+    );
   });
 
   it("ties the footer submit button to the form with form={id}", () => {
