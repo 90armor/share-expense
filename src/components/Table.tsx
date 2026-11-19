@@ -5,6 +5,15 @@ export type TableColumn = {
   key: string;
   header: string;
   align?: "left" | "right";
+  /**
+   * Pin this column to the right edge of the scroll area, so it stays visible
+   * when a very long word makes the table scroll sideways (e.g. an Amount
+   * column). Opaque background + a left separator, so scrolled text does not
+   * run into it. Not a wrapping fix: the text columns still scroll. Use it on
+   * the last column only: `right-0` sticky pushes a cell left, so a column
+   * followed by others scrolls away once you pass it.
+   */
+  sticky?: boolean;
 };
 
 export type TableProps = {
@@ -12,6 +21,10 @@ export type TableProps = {
   columns: TableColumn[];
   rows: Record<string, ReactNode>[];
 };
+
+// `border-collapse` borders do not move with a sticky cell, so the separator is
+// an inset shadow (drawn by the cell itself) using the border token.
+const STICKY = "sticky right-0 shadow-[inset_1px_0_0_var(--color-border)]";
 
 export function Table({ caption, columns, rows }: TableProps) {
   return (
@@ -29,6 +42,7 @@ export function Table({ caption, columns, rows }: TableProps) {
                 className={cx(
                   "px-4 py-3 font-medium text-muted",
                   column.align === "right" ? "text-right" : "text-left",
+                  column.sticky && cx(STICKY, "bg-paper"),
                 )}
               >
                 {column.header}
@@ -45,6 +59,7 @@ export function Table({ caption, columns, rows }: TableProps) {
                   className={cx(
                     "px-4 py-3 text-ink",
                     column.align === "right" ? "text-right" : "text-left",
+                    column.sticky && cx(STICKY, "bg-surface"),
                   )}
                 >
                   {row[column.key]}

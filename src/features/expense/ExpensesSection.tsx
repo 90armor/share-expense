@@ -49,8 +49,10 @@ export function ExpensesSection({
           columns={[
             { key: "description", header: "Description" },
             { key: "payer", header: "Paid by" },
-            { key: "amount", header: "Amount", align: "right" },
             { key: "participants", header: "Shared by" },
+            // Last and sticky: with a long name the table scrolls sideways and
+            // Amount stays pinned at the right. Sticky only holds on the last column.
+            { key: "amount", header: "Amount", align: "right", sticky: true },
           ]}
           rows={expenses.map((expense) => ({
             description: expense.description ?? (

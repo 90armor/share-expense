@@ -72,13 +72,55 @@ describe("ExpensesSection", () => {
     const headers = [...table.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map(
       (match) => match[1],
     );
-    expect(headers).toEqual(["Description", "Paid by", "Amount", "Shared by"]);
+    // Amount is last: a sticky column only stays pinned when nothing follows it.
+    expect(headers).toEqual(["Description", "Paid by", "Shared by", "Amount"]);
     expect(table).toContain(">Dinner<");
     expect(table).toContain(">No description<");
     expect(table).toContain(formatMoney(DINNER.amount));
     expect(table).toContain(formatMoney(NO_DESCRIPTION.amount));
     // "Shared by" lists names joined with ", " (unchanged).
     expect(table).toContain(">Aung, Bo Bo<");
+  });
+
+  // The table scrolls sideways when a name or description is very long (100
+  // characters, no spaces); Amount is the last column and pinned to the right,
+  // so it is never hidden. Class check only: the real layout is covered in the
+  // PR's manual test table.
+  it("pins the last column, Amount, and leaves the text columns uncapped", () => {
+    const LONG = "x".repeat(100);
+    const html = render({
+      expenses: [
+        {
+          ...DINNER,
+          description: LONG,
+          payer: { ...AUNG, name: LONG },
+          participants: [{ ...AUNG, name: LONG }, BO_BO],
+        },
+      ],
+    });
+    const table = html.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
+    const ths = table.match(/<th[^>]*>[^<]*<\/th>/g) ?? [];
+    const tds = table.match(/<td[\s\S]*?<\/td>/g) ?? [];
+    expect(ths).toHaveLength(4);
+    expect(tds).toHaveLength(4);
+    const sticky = [...ths, ...tds].map((cell) => /\bsticky\b/.test(cell));
+    // Amount is the fourth (last) column in both the header and the row.
+    expect(sticky).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(ths[3]).toContain("Amount");
+    expect(tds[3]).toContain("whitespace-nowrap");
+    expect(tds[0]).toContain(`>${LONG}<`);
+    expect(tds[1]).toContain(`>${LONG}<`);
+    expect(tds[2]).toContain(`>${LONG}, Bo Bo<`);
+    expect(table).not.toContain("max-w-28");
   });
 
   it("renders the Add expense button before the table", () => {
