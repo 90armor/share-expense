@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { MEMBER_NAME_MAX_LENGTH } from "@/lib/limits";
 import { idSchema, nameSchema } from "@/lib/validation";
 
 /** No nameKey here: zod drops unknown keys, so a client-sent key never reaches the service. */
 export const addMemberSchema = z.object({
   groupId: idSchema,
-  name: nameSchema,
+  name: nameSchema(MEMBER_NAME_MAX_LENGTH),
 });
 
 export const removeMemberSchema = z.object({

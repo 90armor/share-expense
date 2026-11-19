@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { AMOUNT_MAX_MINOR_UNITS, NAME_MAX_LENGTH } from "./limits";
+import { AMOUNT_MAX_MINOR_UNITS, MEMBER_NAME_MAX_LENGTH } from "./limits";
 import {
   currencyCodeSchema,
   idSchema,
@@ -10,29 +10,37 @@ import {
   positiveAmountSchema,
 } from "./validation";
 
+// nameSchema is a factory; the member limit stands in for any max.
+const memberName = nameSchema(MEMBER_NAME_MAX_LENGTH);
+
 describe("nameSchema", () => {
   it("trims and accepts a normal name", () => {
-    expect(parseWith(nameSchema, "  Trip to Bagan  ")).toEqual({
+    expect(parseWith(memberName, "  Trip to Bagan  ")).toEqual({
       ok: true,
       value: "Trip to Bagan",
     });
   });
 
   it("accepts exactly the max length", () => {
-    expect(parseWith(nameSchema, "a".repeat(NAME_MAX_LENGTH)).ok).toBe(true);
+    expect(parseWith(memberName, "a".repeat(MEMBER_NAME_MAX_LENGTH)).ok).toBe(
+      true,
+    );
   });
 
-  it.each([[""], ["   "], ["a".repeat(NAME_MAX_LENGTH + 1)], [123], [null]])(
-    "rejects %j",
-    (input) => {
-      const result = parseWith(nameSchema, input);
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.code).toBe("VALIDATION");
-        expect(result.error.fields?._root).toBeTruthy();
-      }
-    },
-  );
+  it.each([
+    [""],
+    ["   "],
+    ["a".repeat(MEMBER_NAME_MAX_LENGTH + 1)],
+    [123],
+    [null],
+  ])("rejects %j", (input) => {
+    const result = parseWith(memberName, input);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("VALIDATION");
+      expect(result.error.fields?._root).toBeTruthy();
+    }
+  });
 });
 
 const UUID_V4 = "3f2b8c1e-9a4d-4e2f-8b6a-1c2d3e4f5a6b";
@@ -149,7 +157,7 @@ describe("positiveAmountSchema (amount > 0 and at most AMOUNT_MAX_MINOR_UNITS)",
 
 describe("parseWith field map", () => {
   const schema = z.object({
-    name: nameSchema,
+    name: memberName,
     currency: currencyCodeSchema,
     payer: z.object({ id: idSchema }),
     amount: moneyAmountSchema("MMK"),
@@ -208,8 +216,8 @@ describe("parseWith field map", () => {
 
   it("keeps errors for field names that exist on Object.prototype", () => {
     const protoSchema = z.object({
-      constructor: nameSchema,
-      toString: nameSchema,
+      constructor: memberName,
+      toString: memberName,
     });
     const result = parseWith(protoSchema, { constructor: " ", toString: "" });
     expect(result.ok).toBe(false);

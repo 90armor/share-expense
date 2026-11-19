@@ -1,15 +1,34 @@
 import { z } from "zod";
 import { appError } from "./appError";
 import { CURRENCY_CODES, type CurrencyCode } from "./currency";
-import { AMOUNT_MAX_MINOR_UNITS, NAME_MAX_LENGTH } from "./limits";
+import { AMOUNT_MAX_MINOR_UNITS, NAME_MAX_CODE_UNITS_PER_CHAR } from "./limits";
 import { formatAmount, parseAmount } from "./money";
 import { fail, ok, type Result } from "./result";
 
-export const nameSchema = z
-  .string()
-  .trim()
-  .min(1, "Name is required")
-  .max(NAME_MAX_LENGTH, `Name must be at most ${NAME_MAX_LENGTH} characters`);
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+/** Visible characters: "ကို" is 3 UTF-16 code units but 1 grapheme. */
+function graphemeCount(text: string): number {
+  return Array.from(graphemes.segment(text)).length;
+}
+
+/**
+ * Trimmed, non-blank name of at most `maxLength` visible characters
+ * (graphemes). The code-unit backstop runs first and aborts, so a huge string
+ * is never segmented.
+ */
+export function nameSchema(maxLength: number) {
+  const tooLong = `Name must be at most ${maxLength} characters`;
+  return z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(maxLength * NAME_MAX_CODE_UNITS_PER_CHAR, {
+      message: tooLong,
+      abort: true,
+    })
+    .refine((name) => graphemeCount(name) <= maxLength, tooLong);
+}
 
 /**
  * Row ids are UUID v4 (Prisma `@default(uuid(4))`): random, so a URL cannot be

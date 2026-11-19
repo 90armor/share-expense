@@ -83,7 +83,8 @@ describe("ExpensesSection", () => {
   });
 
   // The table scrolls sideways when a name or description is very long (100
-  // characters, no spaces); Amount is the last column and pinned to the right,
+  // characters, no spaces: a description, or a name saved before the 40/60
+  // limits); Amount is the last column and pinned to the right,
   // so it is never hidden. Class check only: the real layout is covered in the
   // PR's manual test table.
   it("pins the last column, Amount, and leaves the text columns uncapped", () => {

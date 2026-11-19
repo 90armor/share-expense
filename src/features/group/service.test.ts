@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { GROUP_NAME_MAX_LENGTH } from "@/lib/limits";
 import { idSchema, parseWith } from "@/lib/validation";
 import { createTestDb, type TestDb } from "@/server/testDb";
 import { createGroup, getGroup } from "./service";
@@ -76,7 +77,11 @@ describe("group service (temp SQLite with migrations applied)", () => {
     it.each([
       ["blank name", { name: "", currency: "MMK" }, ["name"]],
       ["whitespace-only name", { name: "   ", currency: "MMK" }, ["name"]],
-      ["101-char name", { name: "a".repeat(101), currency: "MMK" }, ["name"]],
+      [
+        "too-long name",
+        { name: "a".repeat(GROUP_NAME_MAX_LENGTH + 1), currency: "MMK" },
+        ["name"],
+      ],
       ["bad currency", { name: "Trip", currency: "EUR" }, ["currency"]],
       ["empty object", {}, ["currency", "name"]],
     ])("rejects %s and inserts nothing", async (_, input, expectedFields) => {

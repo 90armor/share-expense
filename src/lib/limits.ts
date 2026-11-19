@@ -1,11 +1,22 @@
 /**
  * Input limits shared by server validation (validation.ts) and client forms
- * (e.g. an input's maxLength). Kept free of zod so client code can import it
- * without pulling zod into the browser bundle.
+ * (e.g. a hint). Kept free of zod so client code can import it without pulling
+ * zod into the browser bundle.
  */
-export const NAME_MAX_LENGTH = 100;
 
-/** Optional expense description, same length rule as names. */
+/** Member name, in visible characters (graphemes), not UTF-16 code units. */
+export const MEMBER_NAME_MAX_LENGTH = 40;
+
+/** Group name, in visible characters (graphemes), not UTF-16 code units. */
+export const GROUP_NAME_MAX_LENGTH = 60;
+
+/**
+ * Backstop: a name may also use at most (max length x this) UTF-16 code units,
+ * because one grapheme can be any length (e.g. "a" + 200 combining marks).
+ */
+export const NAME_MAX_CODE_UNITS_PER_CHAR = 4;
+
+/** Optional expense description, in UTF-16 code units (an input's maxLength). */
 export const DESCRIPTION_MAX_LENGTH = 100;
 
 /**
