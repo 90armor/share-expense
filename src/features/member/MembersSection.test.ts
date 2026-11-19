@@ -44,4 +44,20 @@ describe("MembersSection", () => {
     expect(items[1]).toContain(">Bo Bo<");
     expect(items[1]).toContain('aria-label="Remove Bo Bo"');
   });
+
+  // Class check only: it proves the classes are rendered, not the layout. The
+  // Remove button is a direct flex item of the row, so shrink-0 must sit on it;
+  // without it the Button's min-w-11 lets a long name squeeze it to 44px.
+  it("keeps the Remove button from shrinking next to a long name", () => {
+    const name = "a".repeat(100);
+    const html = render({ members: [{ id: AUNG.id, name }] });
+    const button =
+      html.match(
+        new RegExp(`<button[^>]*aria-label="Remove ${name}"[^>]*>`),
+      )?.[0] ?? "";
+    expect(button).toMatch(/class="[^"]*\bshrink-0\b/);
+    expect(html).toMatch(
+      new RegExp(`<span class="min-w-0 break-words">${name}</span>`),
+    );
+  });
 });
