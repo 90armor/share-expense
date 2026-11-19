@@ -81,6 +81,35 @@ describe("ExpensesSection", () => {
     expect(table).toContain(">Aung, Bo Bo<");
   });
 
+  // A name or description can be 100 characters with no spaces; the text
+  // columns cap their content so it wraps instead of pushing Amount out of view.
+  // Class check only: the real layout is covered in the PR's manual test table.
+  it("caps the text columns but not Amount, so long names wrap", () => {
+    const LONG = "x".repeat(100);
+    const html = render({
+      expenses: [
+        {
+          ...DINNER,
+          description: LONG,
+          payer: { ...AUNG, name: LONG },
+          participants: [{ ...AUNG, name: LONG }, BO_BO],
+        },
+      ],
+    });
+    const row = html.match(/<tbody[\s\S]*<\/tbody>/)?.[0] ?? "";
+    const tds = row.match(/<td[\s\S]*?<\/td>/g) ?? [];
+    expect(tds).toHaveLength(4);
+    const [description, payer, amount, participants] = tds;
+    for (const cell of [description, payer, participants]) {
+      expect(cell).toMatch(/<div class="[^"]*max-w-28[^"]*break-words/);
+    }
+    expect(description).toContain(`>${LONG}<`);
+    expect(payer).toContain(`>${LONG}<`);
+    expect(participants).toContain(`>${LONG}, Bo Bo<`);
+    expect(amount).not.toContain("<div");
+    expect(amount).toContain("whitespace-nowrap");
+  });
+
   it("renders the Add expense button before the table", () => {
     const html = render({ expenses: [DINNER] });
     expect(html.search(OPENER)).toBeLessThan(html.indexOf("<table"));

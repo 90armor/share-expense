@@ -5,6 +5,12 @@ export type TableColumn = {
   key: string;
   header: string;
   align?: "left" | "right";
+  /**
+   * Text column that can hold a very long word (e.g. a 100-char name): caps the
+   * content width so it wraps instead of widening the table. Not for numbers.
+   * A cap, not `wrap-anywhere`: that lets every word break mid-word when narrow.
+   */
+  wrap?: boolean;
 };
 
 export type TableProps = {
@@ -47,7 +53,15 @@ export function Table({ caption, columns, rows }: TableProps) {
                     column.align === "right" ? "text-right" : "text-left",
                   )}
                 >
-                  {row[column.key]}
+                  {column.wrap ? (
+                    // overflow-wrap: break-word alone does not lower a table
+                    // column's min-content width; the max-width clamps it.
+                    <div className="max-w-28 break-words">
+                      {row[column.key]}
+                    </div>
+                  ) : (
+                    row[column.key]
+                  )}
                 </td>
               ))}
             </tr>

@@ -47,10 +47,10 @@ export function ExpensesSection({
         <Table
           caption="Newest first"
           columns={[
-            { key: "description", header: "Description" },
-            { key: "payer", header: "Paid by" },
+            { key: "description", header: "Description", wrap: true },
+            { key: "payer", header: "Paid by", wrap: true },
             { key: "amount", header: "Amount", align: "right" },
-            { key: "participants", header: "Shared by" },
+            { key: "participants", header: "Shared by", wrap: true },
           ]}
           rows={expenses.map((expense) => ({
             description: expense.description ?? (
