@@ -72,7 +72,8 @@ describe("ExpensesSection", () => {
     const headers = [...table.matchAll(/<th[^>]*>([^<]*)<\/th>/g)].map(
       (match) => match[1],
     );
-    expect(headers).toEqual(["Description", "Paid by", "Amount", "Shared by"]);
+    // Amount is last: a sticky column only stays pinned when nothing follows it.
+    expect(headers).toEqual(["Description", "Paid by", "Shared by", "Amount"]);
     expect(table).toContain(">Dinner<");
     expect(table).toContain(">No description<");
     expect(table).toContain(formatMoney(DINNER.amount));
@@ -81,10 +82,11 @@ describe("ExpensesSection", () => {
     expect(table).toContain(">Aung, Bo Bo<");
   });
 
-  // A name or description can be 100 characters with no spaces; the text
-  // columns cap their content so it wraps instead of pushing Amount out of view.
-  // Class check only: the real layout is covered in the PR's manual test table.
-  it("caps the text columns but not Amount, so long names wrap", () => {
+  // The table scrolls sideways when a name or description is very long (100
+  // characters, no spaces); Amount is the last column and pinned to the right,
+  // so it is never hidden. Class check only: the real layout is covered in the
+  // PR's manual test table.
+  it("pins the last column, Amount, and leaves the text columns uncapped", () => {
     const LONG = "x".repeat(100);
     const html = render({
       expenses: [
@@ -96,18 +98,29 @@ describe("ExpensesSection", () => {
         },
       ],
     });
-    const row = html.match(/<tbody[\s\S]*<\/tbody>/)?.[0] ?? "";
-    const tds = row.match(/<td[\s\S]*?<\/td>/g) ?? [];
+    const table = html.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
+    const ths = table.match(/<th[^>]*>[^<]*<\/th>/g) ?? [];
+    const tds = table.match(/<td[\s\S]*?<\/td>/g) ?? [];
+    expect(ths).toHaveLength(4);
     expect(tds).toHaveLength(4);
-    const [description, payer, amount, participants] = tds;
-    for (const cell of [description, payer, participants]) {
-      expect(cell).toMatch(/<div class="[^"]*max-w-28[^"]*break-words/);
-    }
-    expect(description).toContain(`>${LONG}<`);
-    expect(payer).toContain(`>${LONG}<`);
-    expect(participants).toContain(`>${LONG}, Bo Bo<`);
-    expect(amount).not.toContain("<div");
-    expect(amount).toContain("whitespace-nowrap");
+    const sticky = [...ths, ...tds].map((cell) => /\bsticky\b/.test(cell));
+    // Amount is the fourth (last) column in both the header and the row.
+    expect(sticky).toEqual([
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(ths[3]).toContain("Amount");
+    expect(tds[3]).toContain("whitespace-nowrap");
+    expect(tds[0]).toContain(`>${LONG}<`);
+    expect(tds[1]).toContain(`>${LONG}<`);
+    expect(tds[2]).toContain(`>${LONG}, Bo Bo<`);
+    expect(table).not.toContain("max-w-28");
   });
 
   it("renders the Add expense button before the table", () => {
