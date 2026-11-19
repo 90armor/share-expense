@@ -23,8 +23,11 @@ export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
 
   return (
     <>
+      {/* shrink-0: a direct flex item of the member row; Button's min-w-11
+          would otherwise let a long name squeeze it below its text width. */}
       <Button
         variant="secondary"
+        className="shrink-0"
         aria-label={`Remove ${memberName}`}
         onClick={() => setOpen(true)}
       >
