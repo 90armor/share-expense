@@ -6,7 +6,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 - Feature folder is singular: `src/features/<name>/`. Routes are plural: `src/app/<names>/new`, `src/app/<names>/[id]`.
 - `schema.ts` — zod schema built from `src/lib/validation.ts` pieces + inferred types.
-- `service.ts` — `fn(db: PrismaClient, input: unknown): Promise<Result<T>>`. The only code that touches Prisma.
+- `service.ts` — `fn(db: PrismaClient, input: unknown): Promise<Result<T>>`. The only code that queries the DB (one exception: `/api/health`'s constant `SELECT 1`, see Security).
 - `formState.ts` — pure, built on `src/lib/formState.ts` (`readFormFields`, `toFormState`, `fieldError`, `formError`): the feature's field list, initial state, `readXForm`, `toXFormState`, and a form-level error function bound to its visible fields. It may export only those; the form then imports `fieldError` from `src/lib/formState` directly (member does this; group keeps thin wrappers for its existing exports).
 - `actions.ts` — `"use server"` actions, thin. A feature may have several actions and forms (member: add + remove).
 - `<Thing>Form.tsx` — `"use client"` form (`useActionState`), PascalCase.
@@ -14,7 +14,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 ## Layers
 
-`page → action → service → db`. Pages only read through services; actions only call services.
+`page → action → service → db`. Pages and actions reach the DB only through services; besides services they call only pure helpers that never touch the DB (e.g. `readXForm`/`toXFormState`, `toBalanceView`). The one exception is `/api/health` (see Security).
 
 - **Validation lives in the service only.** Services take `input: unknown` and always run `parseWith(schema, input)`, for writes and reads (ids too, via `idSchema`). Every caller goes through the service; never skip validation. Validation is always server-side. No HTML `required` (users see the server's messages); `maxLength` is fine as a UX aid when it uses the same constant from `src/lib/limits.ts`.
 - **The service takes the db as a parameter.** App code passes `getDb()`; tests pass `createTestDb().db`.
@@ -41,7 +41,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 - Schema: valid, blank, whitespace-only, too long, bad enum values, Burmese text.
 - formState: FormData mapping (missing / File / extra keys), error → state, `fieldError` / `formError`.
 - Service, with `createTestDb()`: write then read back, trimming, invalid input inserts nothing, `NOT_FOUND`, malformed id, Unicode round-trip, a failing fake db → `UNEXPECTED` + logged. Uniqueness → `CONFLICT` (including a `Promise.all` race). Child rows: an id from another parent (another group) → `NOT_FOUND` when a row is loaded or changed by its id, or a field `VALIDATION` when an insert checks membership (expense payer/participants, settlement from/to); nothing is written or changed, with the exact same result as a missing id (full equality, not only the code).
-- Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table.
+- Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table. Exception: a production or security guard in a page (e.g. a dev-only route's `notFound()` in production) gets a unit test next to the page; see docs/decisions.md (`/dev/components` must 404 in production).
 - Tests first: show them failing for the right reason, then implement.
 
 ## E2E
@@ -59,7 +59,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 There is no login, so the id in a URL is the only access control. Ids are UUID v4 (`@default(uuid(4))`, `idSchema = z.uuidv4()`). Never use sequential or time-ordered ids (autoincrement, cuid v1, uuid v1/v7) for anything reachable by URL.
 
-- Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) only call services; the one exception is /api/health's constant `SELECT 1` (no input, no user data).
+- Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) reach the DB only through services, as in Layers; besides services they may call pure helpers that never touch the DB (`readXForm`/`toXFormState`, `toBalanceView`). The one exception is /api/health's constant `SELECT 1` (no input, no user data).
 - The service checks every id with `idSchema` and scopes every read and write by `groupId` (`where: { id, groupId }`, or `findMany({ where: { groupId, id: { in: ids } } })` as a membership check before an insert). Never load or change a child row by its id alone (tested as in What to test › Service, child rows).
 
 ## Final report
