@@ -61,8 +61,10 @@ export function BalanceSection({ groupId, view }: BalanceSectionProps) {
                 className="flex flex-col gap-1"
               >
                 {view.transfers.map((transfer) => (
-                  // The amount is in the key, so a recomputed line never
-                  // reuses an old line's Modal state.
+                  // A recomputed balance can contain a line with the same
+                  // from-to-amount key (settling a later greedy line need not
+                  // zero anyone); React then keeps its SettleForm and state,
+                  // so SettleForm closes its own Modal on success.
                   <li
                     key={`${transfer.from.id}-${transfer.to.id}-${transfer.amount.amount}`}
                     className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"

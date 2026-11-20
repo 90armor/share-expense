@@ -399,3 +399,112 @@ test("an expense at the amount cap shows exact amounts and its line can be marke
   await page.reload();
   await settled();
 });
+
+test("Mark as paid closes its dialog when the recomputed balance has the same line again", async ({
+  page,
+}) => {
+  await createGroup(page, "E2E same line");
+  const names = ["Aung", "Bo Bo", "Chit", "Daw Mya", "Ei Ei"];
+  for (const name of names) await addMember(page, name);
+
+  // Each expense is shared by one member, so splitEqually gives that member
+  // the whole amount (n = 1, r = 0): no remainder, no id-order dependence.
+  const addExpense = async (amount: string, payer: string, sharer: string) => {
+    const dialog = await openAddExpense(page);
+    await dialog.getByLabel("Amount (USD)").fill(amount);
+    await dialog
+      .getByRole("radiogroup", { name: "Paid by" })
+      .getByRole("radio", { name: payer, exact: true })
+      .check();
+    const sharedBy = dialog.getByRole("group", { name: "Shared by" });
+    for (const name of names) {
+      await sharedBy
+        .getByRole("checkbox", { name, exact: true })
+        .setChecked(name === sharer);
+    }
+    await dialog.getByRole("button", { name: "Add expense" }).click();
+    await expect(dialog).toBeHidden();
+  };
+  await addExpense("8", "Ei Ei", "Aung");
+  await addExpense("2", "Chit", "Aung");
+  await addExpense("6", "Daw Mya", "Bo Bo");
+  await addExpense("3", "Chit", "Bo Bo");
+
+  const balance = page.getByRole("region", { name: "Balance" });
+  const lines = balance.getByRole("list", { name: "Who pays whom" });
+  const perMember = balance.getByRole("list", { name: "Per member" });
+  const expectLines = async (expected: string[]) => {
+    await expect(lines.getByRole("listitem")).toHaveCount(expected.length);
+    await expect(lines.getByRole("listitem")).toContainText(expected);
+  };
+  const expectNets = async (expected: Record<string, string>) => {
+    for (const [name, status] of Object.entries(expected)) {
+      await expect(
+        perMember
+          .getByRole("listitem")
+          .filter({ has: page.getByText(name, { exact: true }) }),
+      ).toContainText(status);
+    }
+  };
+
+  // Nets: Aung -10, Bo Bo -9, Chit +5, Daw Mya +6, Ei Ei +8. computeTransfers,
+  // with a unique largest debtor and creditor at every step (so the result
+  // does not depend on the random ids):
+  // Aung->Ei Ei 8 (Aung -2), Bo Bo->Daw Mya 6 (Bo Bo -3), Bo Bo->Chit 3
+  // (Chit +2), Aung->Chit 2.
+  await expectNets({
+    Aung: `owes ${MINUS}USD 10.00`,
+    "Bo Bo": `owes ${MINUS}USD 9.00`,
+    Chit: "is owed +USD 5.00",
+    "Daw Mya": "is owed +USD 6.00",
+    "Ei Ei": "is owed +USD 8.00",
+  });
+  await expectLines([
+    "Aung pays Ei Ei USD 8.00",
+    "Bo Bo pays Daw Mya USD 6.00",
+    "Bo Bo pays Chit USD 3.00",
+    "Aung pays Chit USD 2.00",
+  ]);
+
+  const settleDialog = await openDialog(
+    page,
+    lines.getByRole("button", {
+      name: "Mark as paid: Aung pays Chit USD 2.00",
+      exact: true,
+    }),
+    "Mark as paid?",
+  );
+  await settleDialog
+    .getByRole("button", { name: "Mark as paid", exact: true })
+    .click();
+
+  // Settling Aung->Chit 2: Aung -8, Bo Bo -9, Chit +3, Daw Mya +6, Ei Ei +8.
+  // Greedy (again no ties): Bo Bo->Ei Ei 8 (Bo Bo -1), Aung->Daw Mya 6
+  // (Aung -2), Aung->Chit 2 (Chit +1), Bo Bo->Chit 1. "Aung pays Chit
+  // USD 2.00" is back with the same key, so React keeps its SettleForm.
+  const after = async () => {
+    await expectLines([
+      "Bo Bo pays Ei Ei USD 8.00",
+      "Aung pays Daw Mya USD 6.00",
+      "Aung pays Chit USD 2.00",
+      "Bo Bo pays Chit USD 1.00",
+    ]);
+    // Exactly one settlement: two would give Aung -6.00 and Chit +1.00.
+    await expectNets({
+      Aung: `owes ${MINUS}USD 8.00`,
+      "Bo Bo": `owes ${MINUS}USD 9.00`,
+      Chit: "is owed +USD 3.00",
+      "Daw Mya": "is owed +USD 6.00",
+      "Ei Ei": "is owed +USD 8.00",
+    });
+  };
+  await after();
+  // The refresh has arrived (lines above); the dialog must be closed.
+  await expect(page.getByRole("dialog", { name: "Mark as paid?" })).toHaveCount(
+    0,
+  );
+
+  // Server-rendered from the DB (the SSR path).
+  await page.reload();
+  await after();
+});

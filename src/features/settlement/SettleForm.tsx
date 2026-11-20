@@ -16,9 +16,10 @@ type Props = { groupId: string; from: Member; to: Member; amount: Money };
 
 /**
  * "Mark as paid" button + confirm Modal for one "Who pays whom" line: records
- * that `from` paid `to` the full suggested `amount`. On success the page
- * refreshes, the line disappears and this unmounts (like RemoveMemberForm).
- * On error the Modal stays open with the alert. There is no undo.
+ * that `from` paid `to` the full suggested `amount`. On success the Modal
+ * closes and the page refreshes; the line usually disappears, but the
+ * recomputed balance can contain the same line again. On error the Modal
+ * stays open with the alert. There is no undo.
  */
 export function SettleForm({ groupId, from, to, amount }: Props) {
   const [open, setOpen] = useState(false);
@@ -28,6 +29,15 @@ export function SettleForm({ groupId, from, to, amount }: Props) {
     settleAction,
     initialSettleFormState(groupId, from.id, to.id, amountValue),
   );
+  // Close on success, whatever the keys: the recomputed balance can contain a
+  // line with this line's key, which keeps this mounted (docs/decisions.md).
+  // Same check as AddMemberForm: a finished submit is the only source of a
+  // new state object. On error nothing changes (the Modal keeps the alert).
+  const [seen, setSeen] = useState(state);
+  if (state !== seen) {
+    setSeen(state);
+    if (state.error === null) setOpen(false);
+  }
   const error = settleFormError(state);
   const line = `${from.name} pays ${to.name} ${formatMoney(amount)}`;
 
