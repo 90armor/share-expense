@@ -48,6 +48,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 - Unit tests (Vitest) are the default: schemas, formState, services, `src/lib` logic, section rendering and every edge case.
 - Add or extend an E2E test (Playwright, `e2e/*.spec.ts`) only for a user flow that crosses pages, Server Actions and browser-only behaviour (Modals, hydration, `refresh()`). One happy path per flow; edge cases stay in unit tests.
+- Exception to the line above: every Modal form gets E2E checks for both transitions after a submit, close on success and stay open on error. Node unit tests (`environment: "node"`) cannot see them. If an error is unreachable or impractical to reach through user input, force a server rejection in the test (e.g. set a hidden field to an invalid value before submit) and say why in a test comment.
 - Selectors are what a user sees: role, label, text. Add a test id only when no accessible selector exists, and say why.
 - No fixed sleeps (`waitForTimeout`): use auto-waiting actions and web-first `expect`.
 - Each test creates its own group, so tests never depend on each other or on old rows.
