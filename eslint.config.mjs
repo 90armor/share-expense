@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated Prisma client — not meant to be linted:
     "src/generated/**",
+    // Playwright output (the HTML report ships .js assets):
+    "playwright-report/**",
+    "test-results/**",
   ]),
   prettierConfig,
 ]);

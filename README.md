@@ -41,6 +41,7 @@ SQLite + Prisma 7 (better-sqlite3 adapter). Schema: `prisma/schema.prisma`; migr
 | Local `npm run dev` | `./data/dev.db` | `file:./data/dev.db` (from `.env.example`) |
 | `docker compose up` (dev) | `./data/docker.db` on the host | `file:/app/data/docker.db` (set in `docker-compose.yml`) |
 | Production `runner` image | `/app/data/app.db` on a volume | `file:/app/data/app.db` (image default) |
+| `npm run test:e2e` (Playwright) | `./data/e2e.db` | set by `playwright.config.ts` |
 
 Local and Docker dev use different files on purpose: two processes on one SQLite file over a Docker bind mount can hit lock errors.
 
@@ -66,6 +67,19 @@ curl localhost:3000/api/health
 ```
 
 The container runs as uid 1001 and SQLite needs a writable `/app/data` directory. A named volume (above) works as is. To use a host folder instead (`-v "$PWD/prod-data":/app/data`), on a Linux host make it writable first: `sudo chown 1001:1001 prod-data` (Docker Desktop on macOS maps ownership automatically).
+
+## E2E tests
+
+Playwright, Chromium only. Tests live in `e2e/`; config in `playwright.config.ts`.
+
+- Once: `npx playwright install chromium` (browsers go to `~/Library/Caches/ms-playwright` on macOS)
+- `npm run test:e2e` — runs `db:deploy` on `./data/e2e.db`, `next build`, then `next start` on `127.0.0.1:3100`, and runs the tests. It never touches `dev.db`/`docker.db`, and fails if port 3100 is already in use.
+- `npm run test:e2e -- --repeat-each=5` — stability check
+- `npx playwright show-report` — HTML report (traces of failed tests)
+- `./data/e2e.db` is never reset (each test creates its own group); delete it any time to start fresh.
+- `next start` prints a warning about `output: "standalone"`; it still serves the app and can be ignored here.
+
+CI runs the same command in the `e2e` job and uploads the report only when it fails.
 
 ## Troubleshooting
 
