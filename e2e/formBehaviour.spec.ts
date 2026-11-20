@@ -508,3 +508,72 @@ test("Mark as paid closes its dialog when the recomputed balance has the same li
   await page.reload();
   await after();
 });
+
+test("Mark as paid: a rejected settlement keeps the dialog open with the alert", async ({
+  page,
+}) => {
+  await createGroup(page, "E2E settle error");
+  await addMember(page, "Aung");
+  await addMember(page, "Bo Bo");
+  const expenseDialog = await openAddExpense(page);
+  await expenseDialog.getByLabel("Amount (USD)").fill("10");
+  await expenseDialog
+    .getByRole("radiogroup", { name: "Paid by" })
+    .getByRole("radio", { name: "Aung" })
+    .check();
+  await expenseDialog.getByRole("button", { name: "Add expense" }).click();
+  await expect(expenseDialog).toBeHidden();
+
+  // splitEqually(1000, 2): q = 500, r = 0, so both shares are USD 5.00 in any
+  // id order. Nets: Aung +5.00, Bo Bo -5.00 -> one line.
+  const balance = page.getByRole("region", { name: "Balance" });
+  const lines = balance.getByRole("list", { name: "Who pays whom" });
+  const perMember = balance.getByRole("list", { name: "Per member" });
+  const memberRow = (name: string) =>
+    perMember
+      .getByRole("listitem")
+      .filter({ has: page.getByText(name, { exact: true }) });
+  const unchanged = async () => {
+    await expect(lines.getByRole("listitem")).toHaveCount(1);
+    await expect(
+      lines.getByText("Bo Bo pays Aung USD 5.00", { exact: true }),
+    ).toBeVisible();
+    await expect(memberRow("Aung")).toContainText("is owed +USD 5.00");
+    await expect(memberRow("Bo Bo")).toContainText(`owes ${MINUS}USD 5.00`);
+  };
+  await unchanged();
+
+  const dialog = await openDialog(
+    page,
+    lines.getByRole("button", {
+      name: "Mark as paid: Bo Bo pays Aung USD 5.00",
+      exact: true,
+    }),
+    "Mark as paid?",
+  );
+  // The only settle error user input reaches needs a line above the amount
+  // cap (docs/decisions.md, Known limitations (settle)), so force a server
+  // rejection instead. A hidden input has no role, label or text, hence the
+  // name selector. A probe showed the DOM edit reaches the
+  // submitted FormData (the action reads FormData, not the previous state).
+  await dialog
+    .locator('input[name="amount"]')
+    .evaluate((input: HTMLInputElement) => {
+      input.value = "0";
+    });
+
+  const actions = countServerActions(page);
+  await dialog
+    .getByRole("button", { name: "Mark as paid", exact: true })
+    .click();
+  const alert = dialog.getByRole("alert");
+  await expect(alert).toHaveText(/^Error:/);
+  await expect(alert).toContainText("Amount must be more than 0");
+  await expect(dialog).toBeVisible();
+  expect(actions.count).toBe(1);
+  await unchanged();
+
+  // Server-rendered from the DB: no settlement was recorded.
+  await page.reload();
+  await unchanged();
+});
