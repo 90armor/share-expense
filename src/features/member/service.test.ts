@@ -285,15 +285,25 @@ describe("member service (temp SQLite with migrations applied)", () => {
       });
     });
 
-    it("returns NOT_FOUND for a member of another group and keeps it", async () => {
+    // Security: no existence leak. A forged (group A, member of B) pair must be
+    // indistinguishable from a member id that exists nowhere.
+    it("gives a member of another group the same NOT_FOUND as a missing member", async () => {
       const inB = await add(groupB, "Aung");
 
-      const result = await removeMember(testDb.db, {
+      const otherGroup = await removeMember(testDb.db, {
         groupId: groupA,
         memberId: inB.id,
       });
+      const missing = await removeMember(testDb.db, {
+        groupId: groupA,
+        memberId: MISSING_ID,
+      });
 
-      expect(!result.ok && result.error.code).toBe("NOT_FOUND");
+      expect(otherGroup).toEqual(missing);
+      expect(otherGroup).toEqual({
+        ok: false,
+        error: { code: "NOT_FOUND", message: "Member not found" },
+      });
       expect(await listMembers(testDb.db, groupB)).toEqual({
         ok: true,
         value: [inB],

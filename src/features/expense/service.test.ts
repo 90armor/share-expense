@@ -179,9 +179,18 @@ describe("expense service (temp SQLite with migrations applied)", () => {
         input({ payerId: MISSING_ID, participantIds: [MISSING_ID_2] }),
       );
 
-      expect(!result.ok && result.error.fields).toEqual({
-        payerId: "Choose a member of this group",
-        participantIds: "Choose only members of this group",
+      // Full result, not only the fields: must match the other-group cases
+      // above exactly (no existence leak).
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "VALIDATION",
+          message: "Invalid input",
+          fields: {
+            payerId: "Choose a member of this group",
+            participantIds: "Choose only members of this group",
+          },
+        },
       });
       expect(await counts()).toEqual({ expenses: 0, participants: 0 });
     });
