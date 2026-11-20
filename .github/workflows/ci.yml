@@ -60,3 +60,16 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  docker-smoke:
+    name: docker-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # No path filters: this is a required check, and a skipped required job
+    # blocks merges. Plain `docker build` (BuildKit is the default on hosted
+    # runners); no layer cache, see docs/decisions.md.
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --target runner -t share-expense:ci .
+      # Starts the image on an empty volume; prints `docker logs` on failure.
+      - run: scripts/smoke-runner.sh share-expense:ci
