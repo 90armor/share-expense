@@ -40,7 +40,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 - Schema: valid, blank, whitespace-only, too long, bad enum values, Burmese text.
 - formState: FormData mapping (missing / File / extra keys), error → state, `fieldError` / `formError`.
-- Service, with `createTestDb()`: write then read back, trimming, invalid input inserts nothing, `NOT_FOUND`, malformed id, Unicode round-trip, a failing fake db → `UNEXPECTED` + logged. Uniqueness → `CONFLICT` (including a `Promise.all` race). Child rows: an id from another parent (another group) → `NOT_FOUND`, and the row is untouched.
+- Service, with `createTestDb()`: write then read back, trimming, invalid input inserts nothing, `NOT_FOUND`, malformed id, Unicode round-trip, a failing fake db → `UNEXPECTED` + logged. Uniqueness → `CONFLICT` (including a `Promise.all` race). Child rows: an id from another parent (another group) → `NOT_FOUND` when a row is loaded or changed by its id, or a field `VALIDATION` when an insert checks membership (expense payer/participants, settlement from/to); nothing is written or changed, with the exact same result as a missing id (full equality, not only the code).
 - Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table.
 - Tests first: show them failing for the right reason, then implement.
 
@@ -58,6 +58,9 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 ## Security
 
 There is no login, so the id in a URL is the only access control. Ids are UUID v4 (`@default(uuid(4))`, `idSchema = z.uuidv4()`). Never use sequential or time-ordered ids (autoincrement, cuid v1, uuid v1/v7) for anything reachable by URL.
+
+- Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) only call services; the one exception is /api/health's constant `SELECT 1` (no input, no user data).
+- The service checks every id with `idSchema` and scopes every read and write by `groupId` (`where: { id, groupId }`, or `findMany({ where: { groupId, id: { in: ids } } })` as a membership check before an insert). Never load or change a child row by its id alone (tested as in What to test › Service, child rows).
 
 ## Final report
 
