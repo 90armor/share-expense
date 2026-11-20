@@ -11,8 +11,10 @@ import { addSettlement } from "./service";
 
 // Thin: FormData -> service (which validates, including that both ids belong
 // to this group) -> form state. On success, refresh() re-renders /groups/[id]
-// in the same response: the settled line disappears, unmounting its form
-// (no try/catch: the service catches DB errors, and refresh() does not throw).
+// in the same response with the recomputed balance; SettleForm closes its
+// Modal on the success state (the same line can come back, so it may stay
+// mounted). No try/catch: the service catches DB errors, and refresh() does
+// not throw.
 export async function settleAction(
   _prevState: SettleFormState,
   formData: FormData,
