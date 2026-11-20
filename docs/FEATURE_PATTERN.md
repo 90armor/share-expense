@@ -69,6 +69,7 @@ The final report must contain:
 3. The full code of new pure logic (services, `src/lib` functions), plus short snippets for anything the plan flagged.
 4. Side effects outside the repo: pushes, PRs, Docker containers, images, volumes, databases or ports you touched, including the user's own dev environment.
 5. What you could NOT verify.
+6. `code-reviewer` findings. After committing, run `git fetch origin`, write `git diff --stat origin/main...HEAD` and `git diff origin/main...HEAD` to a file outside the repo (your scratchpad), and run the `code-reviewer` subagent with that path. Paste its findings verbatim (do not summarise or re-rank them), then, separately, what you did with each: fixed, or not fixed and why.
 
 For a new rule or safety check, show it can fail (mutation check): break the code on purpose, show the tests fail, undo it with an Edit, then show `git diff` is empty. Never undo with `git checkout` or `git restore`.
 
