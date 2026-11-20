@@ -44,6 +44,16 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 - Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table.
 - Tests first: show them failing for the right reason, then implement.
 
+## E2E
+
+- Unit tests (Vitest) are the default: schemas, formState, services, `src/lib` logic, section rendering and every edge case.
+- Add or extend an E2E test (Playwright, `e2e/*.spec.ts`) only for a user flow that crosses pages, Server Actions and browser-only behaviour (Modals, hydration, `refresh()`). One happy path per flow; edge cases stay in unit tests.
+- Selectors are what a user sees: role, label, text. Add a test id only when no accessible selector exists, and say why.
+- No fixed sleeps (`waitForTimeout`): use auto-waiting actions and web-first `expect`.
+- Each test creates its own group, so tests never depend on each other or on old rows.
+- Expected amounts are derived from the lib rules (`splitEqually`, `computeTransfers`), written next to the assertion.
+- The E2E server uses its own port (3100) and `./data/e2e.db`; never dev.db or docker.db.
+
 ## Security
 
 There is no login, so the id in a URL is the only access control. Ids are UUID v4 (`@default(uuid(4))`, `idSchema = z.uuidv4()`). Never use sequential or time-ordered ids (autoincrement, cuid v1, uuid v1/v7) for anything reachable by URL.

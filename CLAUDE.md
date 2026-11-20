@@ -23,6 +23,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
 - `npm run test` — Vitest unit tests (`src/**/*.test.ts`, next to the code they cover)
+- `npm run test:e2e` — Playwright E2E, Chromium (`e2e/*.spec.ts`; builds + starts on 127.0.0.1:3100 with `./data/e2e.db`; once: `npx playwright install chromium`)
 - `docker compose up --build` / `down` / `run --rm app npm run <cmd>` — Docker dev workflow (build & run, stop, run lint/typecheck/test in container)
 
 ## Naming & Structure Conventions
