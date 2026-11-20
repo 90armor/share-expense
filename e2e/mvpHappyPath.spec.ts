@@ -1,25 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
-
-/** U+2212, the minus sign the balance uses (not the ASCII hyphen). */
-const MINUS = "−";
-
-/**
- * Clicks a Modal opener until its dialog is open. Before React hydrates, the
- * button has no click handler and a click does nothing (known UX gap, see
- * docs/decisions.md), so the click is retried on a condition, never a sleep.
- */
-async function openDialog(
-  page: Page,
-  opener: Locator,
-  name: string,
-): Promise<Locator> {
-  const dialog = page.getByRole("dialog", { name });
-  await expect(async () => {
-    if (!(await dialog.isVisible())) await opener.click();
-    await expect(dialog).toBeVisible({ timeout: 1_000 });
-  }).toPass({ timeout: 15_000 });
-  return dialog;
-}
+import { expect, test } from "@playwright/test";
+import { MINUS, openDialog } from "./helpers";
 
 test("create a group, add members and an expense, then mark a line as paid", async ({
   page,
