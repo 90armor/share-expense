@@ -14,7 +14,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 ## Layers
 
-`page → action → service → db`. Pages and actions reach the DB only through services; besides services they call only pure helpers that never touch the DB (e.g. `readXForm`/`toXFormState`, `toBalanceView`). The one exception is `/api/health` (see Security).
+`page → action → service → db`. Pages and actions reach the DB only through services, passing them `getDb()`; besides that they call only pure helpers that never touch the DB (e.g. `readXForm`/`toXFormState`, `toBalanceView`). The one exception is `/api/health` (see Security).
 
 - **Validation lives in the service only.** Services take `input: unknown` and always run `parseWith(schema, input)`, for writes and reads (ids too, via `idSchema`). Every caller goes through the service; never skip validation. Validation is always server-side. No HTML `required` (users see the server's messages); `maxLength` is fine as a UX aid when it uses the same constant from `src/lib/limits.ts`.
 - **The service takes the db as a parameter.** App code passes `getDb()`; tests pass `createTestDb().db`.
@@ -59,7 +59,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 
 There is no login, so the id in a URL is the only access control. Ids are UUID v4 (`@default(uuid(4))`, `idSchema = z.uuidv4()`). Never use sequential or time-ordered ids (autoincrement, cuid v1, uuid v1/v7) for anything reachable by URL.
 
-- Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) reach the DB only through services, as in Layers; besides services they may call pure helpers that never touch the DB (`readXForm`/`toXFormState`, `toBalanceView`). The one exception is /api/health's constant `SELECT 1` (no input, no user data).
+- Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) reach the DB only through services, passing them `getDb()`, as in Layers; besides that they may call pure helpers that never touch the DB (`readXForm`/`toXFormState`, `toBalanceView`). The one exception is /api/health's constant `SELECT 1` (no input, no user data).
 - The service checks every id with `idSchema` and scopes every read and write by `groupId` (`where: { id, groupId }`, or `findMany({ where: { groupId, id: { in: ids } } })` as a membership check before an insert). Never load or change a child row by its id alone (tested as in What to test › Service, child rows).
 
 ## Final report
