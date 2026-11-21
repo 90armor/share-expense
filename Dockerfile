@@ -77,9 +77,8 @@ COPY --from=prisma-cli /prisma-cli/node_modules ./node_modules
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
-# Prisma client uses a custom output path (outside node_modules) — copy
-# explicitly rather than rely on the standalone tracer to catch it.
-COPY --from=build --chown=nextjs:nodejs /app/src/generated ./src/generated
+# No src/generated: the generated Prisma client is bundled into
+# .next/server/chunks (see docs/decisions.md).
 # What `prisma migrate deploy` needs at start.
 COPY --from=build /app/prisma7.config.ts ./
 COPY --from=build /app/prisma/schema.prisma ./prisma/schema.prisma
