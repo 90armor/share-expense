@@ -4,8 +4,9 @@
 # Starts the image on a NEW, empty named volume and checks that:
 #   - it becomes ready (/api/health 200) within a bounded time, and fails
 #     fast if the container exits first (e.g. `migrate deploy` failed);
-#   - /api/health, / and /groups/new return 200;
+#   - /api/health, / and /groups/new return 200; /dev/components returns 404;
 #   - every migration in this repo's prisma/migrations was applied at start;
+#   - every effect package in the image has the version in package-lock.json;
 #   - PID 1 is node (the entrypoint exec'd), running as the non-root nextjs user.
 # On any failure it prints `docker logs` and exits 1.
 #
@@ -65,11 +66,14 @@ while :; do
 done
 log "ready after $((SECONDS - start))s: $body"
 
-# --- HTTP ---
-for path in /api/health / /groups/new; do
+# --- HTTP: path:expected status ---
+# /dev/components is a dev-only preview; the build prerenders it as a 404.
+for check in /api/health:200 /:200 /groups/new:200 /dev/components:404; do
+  path=${check%:*}
+  want=${check##*:}
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE$path") ||
     fail "GET $path: no response"
-  [ "$code" = "200" ] || fail "GET $path returned $code, expected 200"
+  [ "$code" = "$want" ] || fail "GET $path returned $code, expected $want"
   log "GET $path -> $code"
 done
 
@@ -92,6 +96,31 @@ console.log(row.n);
 [ "$applied" = "$expected" ] ||
   fail "applied migrations: $applied, expected $expected (prisma/migrations)"
 log "migrations applied: $applied of $expected"
+
+# --- effect: every copy in the image = the version in package-lock.json ---
+# The prisma-cli stage installs without the lockfile, so `npm audit` (which
+# reads only package-lock.json) does not see what it installed. The lockfile
+# goes in on stdin, so the host still needs no node. Prisma's own bundled
+# effect inside prisma/build is not a package and is not seen (decisions.md).
+effect=$(docker exec -i "$NAME" node -e '
+const fs = require("node:fs");
+const { execFileSync } = require("node:child_process");
+const lock = JSON.parse(fs.readFileSync(0, "utf8"));
+const expected = lock.packages?.["node_modules/effect"]?.version;
+const files = execFileSync("find", ["/app", "-path", "*/node_modules/effect/package.json"], { encoding: "utf8" })
+  .split("\n")
+  .filter(Boolean);
+let ok = Boolean(expected) && files.length > 0;
+console.log(`expected ${expected ?? "(none: no node_modules/effect)"} from package-lock.json`);
+if (files.length === 0) console.log("no effect package found under /app");
+for (const file of files) {
+  const { version } = JSON.parse(fs.readFileSync(file, "utf8"));
+  if (version !== expected) ok = false;
+  console.log(`${file.replace(/\/package\.json$/, "")} ${version}${version === expected ? "" : " MISMATCH"}`);
+}
+process.exit(ok ? 0 : 1);
+' <"$REPO_ROOT/package-lock.json") || fail "effect version check:"$'\n'"$effect"
+while IFS= read -r line; do log "effect: $line"; done <<<"$effect"
 
 # --- Non-root: check the running process, not just the image's USER ---
 # The executable, not comm/cmdline: Next.js sets process.title to
