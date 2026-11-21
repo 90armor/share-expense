@@ -42,12 +42,16 @@ RUN npm run build
 # The standalone output has no CLI, but the runner applies migrations at start.
 # Versions are read from package.json so they stay pinned to the app's.
 # --legacy-peer-deps: don't pull in prisma's peers (better-sqlite3, typescript).
+# The app's `overrides` are copied too: this install has no lockfile, so without
+# them the CLI would get the unpatched transitive versions (see docs/decisions.md).
 FROM node:24-slim AS prisma-cli
 WORKDIR /prisma-cli
 COPY package.json /tmp/app-package.json
 RUN PRISMA_VERSION=$(node -p "require('/tmp/app-package.json').devDependencies.prisma") \
     && DOTENV_VERSION=$(node -p "require('/tmp/app-package.json').dependencies.dotenv") \
     && npm init -y >/dev/null \
+    && npm pkg set --json \
+       overrides="$(node -p "JSON.stringify(require('/tmp/app-package.json').overrides || {})")" \
     && npm install --no-save --no-package-lock --legacy-peer-deps \
        "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}"
 
