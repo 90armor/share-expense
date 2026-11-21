@@ -51,7 +51,7 @@ RUN PRISMA_VERSION=$(node -p "require('/tmp/app-package.json').devDependencies.p
     && DOTENV_VERSION=$(node -p "require('/tmp/app-package.json').dependencies.dotenv") \
     && npm init -y >/dev/null \
     && npm pkg set --json \
-       overrides="$(node -p "JSON.stringify(require('/tmp/app-package.json').overrides)")" \
+       overrides="$(node -p "JSON.stringify(require('/tmp/app-package.json').overrides || {})")" \
     && npm install --no-save --no-package-lock --legacy-peer-deps \
        "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}"
 
