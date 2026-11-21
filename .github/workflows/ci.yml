@@ -73,3 +73,17 @@ jobs:
       - run: docker build --target runner -t share-expense:ci .
       # Starts the image on an empty volume; prints `docker logs` on failure.
       - run: scripts/smoke-runner.sh share-expense:ci
+
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Full lockfile on purpose, not --omit=dev: prisma is a devDependency but
+    # ships in the runner image. Level high: see docs/decisions.md. Reads only
+    # package-lock.json, so no npm ci.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm audit --package-lock-only --audit-level=high
