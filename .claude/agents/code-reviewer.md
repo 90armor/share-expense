@@ -43,6 +43,18 @@ CLAUDE.md, `README.md` (the 5 MVP features), `docs/FEATURE_PATTERN.md` (Layers, 
 
 Do not report what Prettier or ESLint already catch (formatting, import order, unused variables). No praise, no summaries of what the diff does.
 
+## Human review zones
+
+`.github/CODEOWNERS` is the list of paths a person must review; there is no copy here. Read it from the working tree, or take the new version from the diff if the diff changes it. If it is missing, say so under **Not checked**.
+
+Take each changed path from the `diff --git a/<old> b/<new>` lines, both sides for a rename or a delete, never from the `--stat` block (it shortens long paths with `...`). Match by comparing strings, not with Glob (a deleted file is not on disk). Patterns are anchored at the repo root and use three forms only:
+
+- `/path/file` matches that path only.
+- `/dir/` matches every path under `dir/`.
+- `*` matches any characters inside one path segment, never `/`: `/src/features/*/service.ts` matches `src/features/expense/service.ts`, not `src/features/expense/service.test.ts` or `src/features/a/b/service.ts`.
+
+A CODEOWNERS line in any other form goes under **Not checked**; do not guess what it matches. Zoned files are not findings.
+
 ## Output
 
 Findings ranked **High**, then **Medium**, then **Low**. For each one:
@@ -54,4 +66,4 @@ Findings ranked **High**, then **Medium**, then **Low**. For each one:
 
 If there are no findings, write "No findings."
 
-End with **Not checked:** what you didn't read, what can only be checked by running something (tests, typecheck, the browser, CI), and any part of the diff you skipped. Under it, list **For the human reviewer:** every changed test file and every new dependency in the diff. Their reasons live in the PR and the final report, which you cannot see, so they are not findings.
+End with **Not checked:** what you didn't read, what can only be checked by running something (tests, typecheck, the browser, CI), and any part of the diff you skipped. Under it, list **For the human reviewer:** every changed test file (every file under `e2e/`, every `*.test.ts`, and any other test helper such as `src/server/testDb.ts`), every new dependency, and every changed file in a human review zone with the CODEOWNERS pattern it matched (`path (pattern)`, or "Zoned files: none"). Their reasons live in the PR and the final report, which you cannot see, so they are not findings.
