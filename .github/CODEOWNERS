@@ -38,6 +38,7 @@
 /playwright.config.ts @90armor
 /eslint.config.mjs @90armor
 /tsconfig.json @90armor
+/next.config.ts @90armor
 
 # Secrets
 /.gitignore @90armor
