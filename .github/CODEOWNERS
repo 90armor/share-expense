@@ -1,0 +1,62 @@
+# Human review zones: a person reviews every change to these paths, from an
+# agent or anyone. Why each zone exists, and when review becomes enforced:
+# docs/decisions.md, "Human review zones".
+#
+# The code-reviewer agent reads this file and matches paths itself, so use only
+# these three forms, anchored at the repo root:
+#   /path/file   that file only
+#   /dir/        everything under dir
+#   *            any characters inside one path segment, never "/"
+
+# Money: amounts, the cap, splitting and balances
+/src/lib/money.ts @90armor
+/src/lib/split.ts @90armor
+/src/lib/balance.ts @90armor
+/src/lib/currency.ts @90armor
+/src/lib/limits.ts @90armor
+/src/lib/validation.ts @90armor
+/src/features/*/schema.ts @90armor
+/src/features/balance/balanceView.ts @90armor
+/src/features/settlement/formState.ts @90armor
+
+# Data and access
+/src/features/*/service.ts @90armor
+/src/server/ @90armor
+/src/app/api/ @90armor
+/prisma/ @90armor
+/prisma7.config.ts @90armor
+
+# Supply chain
+/package.json @90armor
+/package-lock.json @90armor
+/.npmrc @90armor
+
+# CI and the checks
+/.github/ @90armor
+/.github/CODEOWNERS @90armor
+/vitest.config.ts @90armor
+/playwright.config.ts @90armor
+/eslint.config.mjs @90armor
+/tsconfig.json @90armor
+
+# Secrets
+/.gitignore @90armor
+/.dockerignore @90armor
+/.env.example @90armor
+
+# Runner image
+/Dockerfile @90armor
+/docker-entrypoint.sh @90armor
+/scripts/ @90armor
+/.nvmrc @90armor
+
+# Agent behaviour
+/.claude/ @90armor
+/CLAUDE.md @90armor
+/AGENTS.md @90armor
+
+# Rules the code-reviewer reads first (CLAUDE.md is above)
+/README.md @90armor
+/docs/FEATURE_PATTERN.md @90armor
+/docs/DESIGN_SYSTEM.md @90armor
+/src/lib/README.md @90armor
