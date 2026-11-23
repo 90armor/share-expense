@@ -23,7 +23,7 @@ class ParseError extends Error {}
 /** Same rule as .gitignore (`.env*`, `!.env.example`). @param {string} name */
 const isEnvName = (name) => name.startsWith(".env") && name !== ".env.example";
 // Globs are tested against these names, so a glob that matches only some
-// other env name (e.g. `.*ging` for `.env.staging`) is not caught.
+// other env name (e.g. `.*foo` for a `.env.foo`) is not caught.
 const ENV_SAMPLES = [
   ".env",
   ".env.local",
