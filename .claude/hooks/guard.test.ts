@@ -134,6 +134,13 @@ const BLOCK: Row[] = [
   bash("ls | xargs rm -rf"),
   bash("if true; then rm -rf b; fi"),
   bash("bash <<'EOF'\nrm -rf b\nEOF"),
+  bash("rm -r --forc b"),
+  bash("rm --rec -f b"),
+  bash("bash -c -x 'rm -rf b'"),
+  bash("bash -c -- 'rm -rf b'"),
+  bash("function f { rm -rf b; }; f"),
+  bash("env -S'rm -rf b'"),
+  bash("env --split-string='rm -rf b'"),
 
   // force push, and any push that lands on main
   bash("git push --force"),
@@ -154,6 +161,11 @@ const BLOCK: Row[] = [
   bash("git push", "main"),
   bash("git push origin", "main"),
   bash("git push -u origin HEAD", "main"),
+  bash("git push origin @", "main"),
+  // git accepts any unambiguous prefix of a long option
+  bash("git push --force-w origin feat/x"),
+  bash("git push --mirr"),
+  bash("git --config-env foo=BAR push --force"),
 
   // commit or merge while on main
   bash('git commit -m "fix: x"', "main"),
@@ -183,6 +195,12 @@ const BLOCK: Row[] = [
   bash("git clean -xdf"),
   bash("git clean --force"),
   bash("git rm -rf src"),
+  bash("git reset --har HEAD~1"),
+  bash("git clean --forc -d"),
+  bash("git switch --discard main"),
+  bash("git rm -r --forc src"),
+  bash("git restore --staged --work a.txt"),
+  bash("git checkout --pathspec-from-file=list.txt"),
 
   // .env through the file tools
   tool("Read", { file_path: "/r/.env" }),
@@ -197,6 +215,7 @@ const BLOCK: Row[] = [
   tool("Grep", { pattern: "KEY", glob: "*" }),
   tool("Grep", { pattern: "KEY", glob: "**/*" }),
   tool("Grep", { pattern: "KEY", glob: "*.env" }),
+  tool("Grep", { pattern: "KEY", glob: "*.development" }),
   tool("Glob", { pattern: "**/.env*" }),
   tool("Glob", { pattern: ".env.local" }),
 
@@ -212,6 +231,7 @@ const BLOCK: Row[] = [
   bash("cat .en''v"),
   bash("cat .env*"),
   bash("cat .e*"),
+  bash("cat .*nt"),
   bash("cat {.env,x}"),
   bash("grep KEY .env"),
   bash("awk 1 .env"),
@@ -261,6 +281,9 @@ const ALLOW: Row[] = [
   bash("git push origin feat/x"),
   bash("git push -u origin feat/x"),
   bash("git push origin main:feat/y"),
+  bash("git push --follow-tags origin feat/x"),
+  bash("git push --force-if-includes origin feat/x"),
+  bash("bash -c 'echo hi' -x"),
   bash("git push", "feat"),
   bash("git push origin HEAD", "feat"),
 

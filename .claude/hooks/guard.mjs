@@ -22,12 +22,18 @@ class ParseError extends Error {}
 
 /** Same rule as .gitignore (`.env*`, `!.env.example`). @param {string} name */
 const isEnvName = (name) => name.startsWith(".env") && name !== ".env.example";
+// Globs are tested against these names, so a glob that matches only some
+// other env name (e.g. `.*ging` for `.env.staging`) is not caught.
 const ENV_SAMPLES = [
   ".env",
   ".env.local",
+  ".env.development",
   ".env.production",
-  ".env.development.local",
   ".env.test",
+  ".env.development.local",
+  ".env.production.local",
+  ".env.test.local",
+  ".env.staging",
 ];
 // `.env` inside code, not after a word character (so `process.env` is fine).
 const ENV_IN_CODE = /(^|[^\w.-])\.env(?!\.example(?![\w.-]))/;
@@ -353,7 +359,7 @@ const RESERVED = new Set([
   "{",
   "}",
 ]);
-const NO_COMMAND = new Set(["for", "case", "select", "function"]);
+const NO_COMMAND = new Set(["for", "case", "select"]);
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const SHELLS = /^(sh|bash|zsh|dash|ksh)$/;
 const INTERPRETERS =
@@ -384,6 +390,10 @@ function unwrap(words) {
   for (;;) {
     while (w.length && (RESERVED.has(w[0]) || ASSIGNMENT.test(w[0])))
       w = w.slice(1);
+    if (w[0] === "function") {
+      w = w.slice(2); // `function name { body` — check the body
+      continue;
+    }
     if (!w.length || NO_COMMAND.has(w[0])) break;
     const name = path.basename(w[0]);
     const rest = w.slice(1);
@@ -411,6 +421,9 @@ function unwrap(words) {
         const a = rest[i];
         if (a === "-S" || a === "--split-string") {
           if (rest[i + 1] !== undefined) scripts.push(rest[i + 1]);
+          i = rest.length;
+        } else if (a.startsWith("-S") || a.startsWith("--split-string=")) {
+          scripts.push(a.slice(a.startsWith("-S") ? 2 : 15));
           i = rest.length;
         } else if (["-u", "--unset", "-C", "--chdir"].includes(a)) i += 2;
         else if (a === "--") i++;
@@ -485,9 +498,21 @@ function hasShort(args, letter) {
   }
   return false;
 }
+/**
+ * Long-option test. git and GNU tools accept any unambiguous prefix
+ * (`--har` = `--hard`), so any prefix of at least one letter counts; an
+ * ambiguous one makes the tool itself fail, so blocking it costs nothing.
+ * @param {string} arg @param {string} name
+ */
+const isLong = (arg, name) => {
+  const option = arg.split("=")[0];
+  return (
+    option.length > 2 && option.startsWith("--") && name.startsWith(option)
+  );
+};
 /** @param {string[]} args @param {...string} names */
 const hasLong = (args, ...names) =>
-  args.some((a) => names.some((n) => a === n || a.startsWith(`${n}=`)));
+  args.some((a) => names.some((n) => isLong(a, n)));
 
 /** @param {string} dir @param {string[]} args */
 function gitOut(dir, args) {
@@ -522,8 +547,8 @@ function checkRm(argv) {
   let force = false;
   for (const a of argv.slice(1)) {
     if (a === "--") break;
-    if (a === "--recursive") recursive = true;
-    else if (a === "--force") force = true;
+    if (isLong(a, "--recursive")) recursive = true;
+    else if (isLong(a, "--force")) force = true;
     else if (/^-[A-Za-z]+$/.test(a)) {
       if (/[rR]/.test(a)) recursive = true;
       if (a.includes("f")) force = true;
@@ -565,7 +590,7 @@ function checkPush(args, dir) {
   for (const spec of refspecs) {
     if (spec.startsWith("+")) throw new Block(`force push (refspec ${spec})`);
     let dest = spec.includes(":") ? spec.slice(spec.indexOf(":") + 1) : spec;
-    if (dest === "HEAD") dest = currentBranch(dir) ?? "";
+    if (dest === "HEAD" || dest === "@") dest = currentBranch(dir) ?? "";
     if (dest.replace(/^refs\/heads\//, "") === "main")
       throw new Block(`push to main (refspec ${spec})`);
   }
@@ -579,7 +604,7 @@ function checkCheckout(args, dir) {
     );
   if (
     args.includes("--") ||
-    hasLong(args, "--force", "--patch") ||
+    hasLong(args, "--force", "--patch", "--pathspec-from-file") ||
     hasShort(args, "f") ||
     hasShort(args, "p")
   )
@@ -606,7 +631,15 @@ function checkGit(argv, cwd) {
     if (a === "-C") {
       dir = path.resolve(dir, argv[i + 1] ?? "");
       i += 2;
-    } else if (["-c", "--git-dir", "--work-tree", "--namespace"].includes(a))
+    } else if (
+      [
+        "-c",
+        "--git-dir",
+        "--work-tree",
+        "--namespace",
+        "--config-env",
+      ].includes(a)
+    )
       i += 2;
     else i++;
   }
@@ -668,8 +701,12 @@ function checkArgv(argv, command, ctx, depth) {
     const flag = argv.findIndex(
       (a, i) => i > 0 && /^-[A-Za-z]*c[A-Za-z]*$/.test(a),
     );
-    if (flag > 0 && argv[flag + 1] !== undefined)
-      checkScript(argv[flag + 1], ctx, depth + 1);
+    // The script is the first non-option word after -c (`bash -c -x 'cmd'`).
+    let at = flag + 1;
+    while (flag > 0 && argv[at]?.startsWith("-"))
+      if (argv[at++] === "--") break;
+    if (flag > 0 && argv[at] !== undefined)
+      checkScript(argv[at], ctx, depth + 1);
     for (const body of fed) checkScript(body, ctx, depth + 1);
   } else if (name === "eval") {
     checkScript(argv.slice(1).join(" "), ctx, depth + 1);
