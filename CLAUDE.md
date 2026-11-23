@@ -12,8 +12,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - SQLite + Prisma
 - Tailwind CSS
 - Vitest (unit), Playwright (e2e)
-- ESLint + Prettier
-- GitHub Actions (CI)
+- ESLint + Prettier, GitHub Actions (CI)
 
 ## Commands
 
@@ -22,7 +21,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 - `npm run format` / `format:check` — Prettier write / check (CI runs format:check)
 - `npm run typecheck` — generates Next.js route types, then TypeScript no-emit check
 - `npm run build` — production build
-- `npm run test` — Vitest unit tests (`src/**/*.test.ts`, next to the code they cover)
+- `npm run test` — Vitest unit tests (`src/**/*.test.ts` + `.claude/hooks/`, next to the code they cover)
 - `npm run test:e2e` — Playwright E2E, Chromium (`e2e/*.spec.ts`; builds + starts on 127.0.0.1:3100 with `./data/e2e.db`; once: `npx playwright install chromium`)
 - `docker compose up --build` / `down` / `run --rm app npm run <cmd>` — Docker dev workflow (build & run, stop, run lint/typecheck/test in container)
 
@@ -55,6 +54,7 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Absolute Don'ts
 
-- `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test` (secret ဖိုင်များ) ကို ဖတ်/ဖွင့်မည်မဟုတ်ပါ — `.env.example` ကိုတော့ ဖတ်/ပြင်နိုင်ပါတယ်။
-- `main` ကို တိုက်ရိုက် push မလုပ်ရ။ `git push --force`, `rm -rf`, destructive git command များကို လုံးဝမလုပ်ရ။
+- `.env*` ဖိုင်အားလုံး (`.gitignore` အတိုင်း — `.env`, `.env.local`, … secret ဖိုင်များ) ကို ဖတ်/ဖွင့်မည်မဟုတ်ပါ — `.env.example` ကိုတော့ ဖတ်/ပြင်နိုင်ပါတယ်။
+- `main` ကို တိုက်ရိုက် push မလုပ်ရ။ `git push --force`, `rm -rf`, destructive git command များ၊ `gh pr merge` (merge က user အလုပ်) ကို လုံးဝမလုပ်ရ။
+- ဒီ rule တွေကို `.claude/hooks/guard.mjs` (PreToolUse) က block လုပ်ပါတယ်။ Block ခံရရင် ပုံစံပြောင်း / variable / script နဲ့ ထပ်မကြိုးစားပါနဲ့ — user ကိုမေးပါ။ မဖမ်းနိုင်တာများ: docs/decisions.md › Guard hook။
 - User မတောင်းထားသော dependency/package ကို ထည့်မည်မဟုတ်ပါ။
