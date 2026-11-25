@@ -6,7 +6,7 @@
 // unsupported files. Why and what it misses: docs/decisions.md › Format hook.
 // Tests: format.test.ts next to this file.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 try {
@@ -20,13 +20,20 @@ try {
       !rel.startsWith(`..${path.sep}`) &&
       !path.isAbsolute(rel);
     if (inside) {
+      const abs = path.join(root, rel);
       const prettier = path.join(
         root,
         "node_modules/prettier/bin/prettier.cjs",
       );
-      // cwd = root, so Prettier reads ./.gitignore and ./.prettierignore like
-      // format:check. A failed run (syntax error, missing Prettier, timeout)
-      // leaves the file as the tool wrote it.
+      // cwd = the checkout the file is in: the nearest folder up to root with a
+      // .prettierignore (a worktree under .claude/worktrees/ has its own), so
+      // Prettier reads its ./.gitignore and ./.prettierignore like format:check
+      // there. A failed run (syntax error, missing Prettier, timeout) leaves
+      // the file as the tool wrote it.
+      let cwd = path.dirname(abs);
+      while (cwd !== root && !existsSync(path.join(cwd, ".prettierignore"))) {
+        cwd = path.dirname(cwd);
+      }
       spawnSync(
         process.execPath,
         [
@@ -36,9 +43,9 @@ try {
           "--no-error-on-unmatched-pattern",
           "--log-level=silent",
           "--",
-          rel,
+          path.relative(cwd, abs),
         ],
-        { cwd: root, stdio: "ignore", timeout: 8000 },
+        { cwd, stdio: "ignore", timeout: 8000 },
       );
     }
   }

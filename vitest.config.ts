@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: "node",
-    // .claude/hooks: the PreToolUse guard's table test (docs/decisions.md › Guard hook).
+    // .claude/hooks: the guard and format hooks' table tests (docs/decisions.md › Guard hook, Format hook).
     include: ["src/**/*.test.ts", ".claude/hooks/**/*.test.ts"],
   },
 });

@@ -44,8 +44,17 @@ beforeAll(() => {
       path.join(REPO, ".prettierrc.json"),
       path.join(root, ".prettierrc.json"),
     );
-    writeFileSync(path.join(root, ".prettierignore"), "generated\n");
+    // `/anchored.ts` is root-anchored, like `/README.md` in the real file.
+    writeFileSync(
+      path.join(root, ".prettierignore"),
+      "generated\n/anchored.ts\n",
+    );
   }
+  writeFileSync(path.join(dirs.root, ".gitignore"), "secret.ts\n");
+  // A nested checkout (a git worktree under .claude/worktrees/ sits inside the
+  // project dir) with its own ignore file: its anchored entries must apply.
+  mkdirSync(path.join(dirs.root, "wt"));
+  writeFileSync(path.join(dirs.root, "wt/.prettierignore"), "/anchored.ts\n");
 });
 
 afterAll(() => {
@@ -54,11 +63,19 @@ afterAll(() => {
   }
 });
 
-function runHook(stdin: string, root = dirs.root) {
+// The hook runs with cwd = root, so a relative path would resolve inside it.
+// root null = CLAUDE_PROJECT_DIR unset.
+function runHook(stdin: string, root: string | null = dirs.root) {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    CLAUDE_PROJECT_DIR: root ?? "",
+  };
+  if (root === null) delete env.CLAUDE_PROJECT_DIR;
   const { status, stdout, stderr } = spawnSync(process.execPath, [HOOK], {
     input: stdin,
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_PROJECT_DIR: root },
+    cwd: dirs.root,
+    env,
   });
   return { status, stdout, stderr };
 }
@@ -72,6 +89,8 @@ type Row = {
   content: string;
   expected: string;
   root?: keyof typeof dirs;
+  // relative: send file_path relative to root; noProjectDir: unset the env var.
+  mode?: "relative" | "noProjectDir";
 };
 
 const ROWS: Row[] = [
@@ -106,6 +125,48 @@ const ROWS: Row[] = [
     file: "generated/c.ts",
     content: UGLY,
     expected: UGLY,
+  },
+  {
+    label: "skips a .gitignore path",
+    tool: "Edit",
+    base: "root",
+    file: "secret.ts",
+    content: UGLY,
+    expected: UGLY,
+  },
+  {
+    label: "applies a nested checkout's own anchored .prettierignore",
+    tool: "Edit",
+    base: "root",
+    file: "wt/anchored.ts",
+    content: UGLY,
+    expected: UGLY,
+  },
+  {
+    label: "formats other files in a nested checkout",
+    tool: "Edit",
+    base: "root",
+    file: "wt/src/h.ts",
+    content: UGLY,
+    expected: PRETTY,
+  },
+  {
+    label: "skips a relative file_path",
+    tool: "Edit",
+    base: "root",
+    file: "src/rel.ts",
+    content: UGLY,
+    expected: UGLY,
+    mode: "relative",
+  },
+  {
+    label: "skips everything when CLAUDE_PROJECT_DIR is unset",
+    tool: "Edit",
+    base: "root",
+    file: "src/noenv.ts",
+    content: UGLY,
+    expected: UGLY,
+    mode: "noProjectDir",
   },
   {
     label: "skips an unsupported file type",
@@ -165,10 +226,11 @@ describe("format hook always exits 0 with no output", () => {
     const file = `${dirs[row.base]}${path.sep}${rel}`;
     mkdirSync(path.dirname(file), { recursive: true });
     writeFileSync(file, row.content);
+    const filePath = row.mode === "relative" ? rel : file;
     const toolInput =
       row.tool === "Write"
-        ? { file_path: file, content: row.content }
-        : { file_path: file, old_string: "x", new_string: "x" };
+        ? { file_path: filePath, content: row.content }
+        : { file_path: filePath, old_string: "x", new_string: "x" };
     const { status, stdout, stderr } = runHook(
       JSON.stringify({
         hook_event_name: "PostToolUse",
@@ -177,7 +239,7 @@ describe("format hook always exits 0 with no output", () => {
         tool_response: { filePath: file },
         cwd: dirs.root,
       }),
-      dirs[row.root ?? "root"],
+      row.mode === "noProjectDir" ? null : dirs[row.root ?? "root"],
     );
     expect({ status, stdout, stderr }).toEqual({
       status: 0,
@@ -189,5 +251,10 @@ describe("format hook always exits 0 with no output", () => {
 
   it("exits 0 when its own input is not JSON", () => {
     expect(runHook("not json")).toEqual({ status: 0, stdout: "", stderr: "" });
+  });
+
+  it("exits 0 when tool_input has no file_path", () => {
+    const stdin = JSON.stringify({ tool_name: "Edit", tool_input: {} });
+    expect(runHook(stdin)).toEqual({ status: 0, stdout: "", stderr: "" });
   });
 });
