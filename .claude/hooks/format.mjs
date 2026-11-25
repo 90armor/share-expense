@@ -10,9 +10,12 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 try {
-  const root = process.env.CLAUDE_PROJECT_DIR;
+  const env = process.env.CLAUDE_PROJECT_DIR;
   const file = JSON.parse(readFileSync(0, "utf8"))?.tool_input?.file_path;
-  if (root && typeof file === "string" && path.isAbsolute(file)) {
+  if (env && typeof file === "string" && path.isAbsolute(file)) {
+    // Normalized (no trailing "/", "." or "//"), so the folder walk below
+    // always reaches root exactly.
+    const root = path.resolve(env);
     const rel = path.relative(root, path.resolve(file));
     const inside =
       rel !== "" &&
@@ -26,12 +29,12 @@ try {
         "node_modules/prettier/bin/prettier.cjs",
       );
       // cwd = the checkout the file is in: the nearest folder up to root with a
-      // .prettierignore (a worktree under .claude/worktrees/ has its own), so
-      // Prettier reads its ./.gitignore and ./.prettierignore like format:check
-      // there. A failed run (syntax error, missing Prettier, timeout) leaves
-      // the file as the tool wrote it.
+      // .git (a worktree under .claude/worktrees/ has a .git file), so Prettier
+      // reads that checkout's ./.gitignore and ./.prettierignore like
+      // format:check there. A failed run (syntax error, missing Prettier,
+      // timeout) leaves the file as the tool wrote it.
       let cwd = path.dirname(abs);
-      while (cwd !== root && !existsSync(path.join(cwd, ".prettierignore"))) {
+      while (cwd !== root && !existsSync(path.join(cwd, ".git"))) {
         cwd = path.dirname(cwd);
       }
       spawnSync(

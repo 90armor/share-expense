@@ -27,17 +27,26 @@ const BROKEN = "const a = {\n";
 // root: a fake project using the repo's Prettier (node_modules symlink) and
 // config. bare: a project without node_modules. other: outside any root.
 // sibling: `<root>-other`, which a plain startsWith(root) would treat as inside.
-const dirs = { root: "", bare: "", other: "", sibling: "" };
+// plain: like root but with no ignore file or .git, so nothing stops a walk
+// up the folders except reaching root itself.
+const dirs = { root: "", bare: "", other: "", sibling: "", plain: "" };
 
 beforeAll(() => {
   dirs.root = mkdtempSync(path.join(tmpdir(), "format-hook-"));
   dirs.bare = mkdtempSync(path.join(tmpdir(), "format-hook-bare-"));
   dirs.other = mkdtempSync(path.join(tmpdir(), "format-hook-other-"));
+  dirs.plain = mkdtempSync(path.join(tmpdir(), "format-hook-plain-"));
   dirs.sibling = `${dirs.root}-other`;
   mkdirSync(dirs.sibling);
-  symlinkSync(
-    path.join(REPO, "node_modules"),
-    path.join(dirs.root, "node_modules"),
+  for (const root of [dirs.root, dirs.plain]) {
+    symlinkSync(
+      path.join(REPO, "node_modules"),
+      path.join(root, "node_modules"),
+    );
+  }
+  copyFileSync(
+    path.join(REPO, ".prettierrc.json"),
+    path.join(dirs.plain, ".prettierrc.json"),
   );
   for (const root of [dirs.root, dirs.bare]) {
     copyFileSync(
@@ -53,8 +62,17 @@ beforeAll(() => {
   writeFileSync(path.join(dirs.root, ".gitignore"), "secret.ts\n");
   // A nested checkout (a git worktree under .claude/worktrees/ sits inside the
   // project dir) with its own ignore file: its anchored entries must apply.
+  // A worktree's `.git` is a file pointing at the main repo.
   mkdirSync(path.join(dirs.root, "wt"));
+  writeFileSync(path.join(dirs.root, "wt/.git"), "gitdir: elsewhere\n");
   writeFileSync(path.join(dirs.root, "wt/.prettierignore"), "/anchored.ts\n");
+  // A dependency that ships its own .prettierignore: not a checkout, so root's
+  // rules (and Prettier's node_modules skip) still apply.
+  mkdirSync(path.join(dirs.root, "lib/node_modules/pkg"), { recursive: true });
+  writeFileSync(
+    path.join(dirs.root, "lib/node_modules/pkg/.prettierignore"),
+    "none\n",
+  );
 });
 
 afterAll(() => {
@@ -75,6 +93,9 @@ function runHook(stdin: string, root: string | null = dirs.root) {
     input: stdin,
     encoding: "utf8",
     cwd: dirs.root,
+    // A hook that never ends fails the row (status null) instead of blocking
+    // Vitest, which cannot interrupt a synchronous spawn.
+    timeout: 5000,
     env,
   });
   return { status, stdout, stderr };
@@ -89,8 +110,9 @@ type Row = {
   content: string;
   expected: string;
   root?: keyof typeof dirs;
-  // relative: send file_path relative to root; noProjectDir: unset the env var.
-  mode?: "relative" | "noProjectDir";
+  // relative: send file_path relative to root; noProjectDir: unset the env var;
+  // trailingSlash: CLAUDE_PROJECT_DIR is `<root>/` (not normalized).
+  mode?: "relative" | "noProjectDir" | "trailingSlash";
 };
 
 const ROWS: Row[] = [
@@ -149,6 +171,24 @@ const ROWS: Row[] = [
     file: "wt/src/h.ts",
     content: UGLY,
     expected: PRETTY,
+  },
+  {
+    label: "skips node_modules even when a package has a .prettierignore",
+    tool: "Edit",
+    base: "root",
+    file: "lib/node_modules/pkg/x.ts",
+    content: UGLY,
+    expected: UGLY,
+  },
+  {
+    label: "formats when CLAUDE_PROJECT_DIR has a trailing slash",
+    tool: "Edit",
+    base: "plain",
+    file: "src/slash.ts",
+    content: UGLY,
+    expected: PRETTY,
+    root: "plain",
+    mode: "trailingSlash",
   },
   {
     label: "skips a relative file_path",
@@ -239,7 +279,11 @@ describe("format hook always exits 0 with no output", () => {
         tool_response: { filePath: file },
         cwd: dirs.root,
       }),
-      row.mode === "noProjectDir" ? null : dirs[row.root ?? "root"],
+      row.mode === "noProjectDir"
+        ? null
+        : row.mode === "trailingSlash"
+          ? `${dirs[row.root ?? "root"]}${path.sep}`
+          : dirs[row.root ?? "root"],
     );
     expect({ status, stdout, stderr }).toEqual({
       status: 0,
