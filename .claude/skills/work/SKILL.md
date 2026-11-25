@@ -29,6 +29,6 @@ Write the plan per FEATURE_PATTERN › Plan. Change no files. Stop and wait for 
 6. `code-reviewer` per FEATURE_PATTERN › Final report item 6.
 7. Final report 1–6 (FEATURE_PATTERN › Final report). STOP.
 
-## Never on your own
+## Push, PR, merge
 
-Push, open a PR or merge. Push and PR follow CLAUDE.md › Git Workflow: the user starts `/open-pr` or says so.
+Never push or open a PR on your own: CLAUDE.md › Git Workflow (the user starts `/open-pr` or says so). Never merge: CLAUDE.md › Absolute Don'ts.

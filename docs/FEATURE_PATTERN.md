@@ -42,7 +42,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 - formState: FormData mapping (missing / File / extra keys), error → state, `fieldError` / `formError`.
 - Service, with `createTestDb()`: write then read back, trimming, invalid input inserts nothing, `NOT_FOUND`, malformed id, Unicode round-trip, a failing fake db → `UNEXPECTED` + logged. Uniqueness → `CONFLICT` (including a `Promise.all` race). Child rows: an id from another parent (another group) → `NOT_FOUND` when a row is loaded or changed by its id, or a field `VALIDATION` when an insert checks membership (expense payer/participants, settlement from/to); nothing is written or changed, with the exact same result as a missing id (full equality, not only the code).
 - Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table. Exception: a production or security guard in a page (e.g. a dev-only route's `notFound()` in production) gets a unit test next to the page; see docs/decisions.md (`/dev/components` must 404 in production).
-- Tests first, for every change with logic (features, fixes, hooks, scripts): write them against stubs before the implementation, show them failing on an assertion (not "cannot find module"), then implement. A change with no logic to test (prose, config) says "no test" and why in the plan.
+- Tests first, for every change with logic (features, fixes, hooks, scripts): write them against stubs before the implementation, show them failing on an assertion (not "cannot find module"), then implement. A change with nothing to unit-test says "no test" and why in the plan: prose needs nothing more; a config change is shown by a measurement with and without it instead, recorded in `docs/decisions.md`.
 
 ## E2E
 
@@ -79,7 +79,7 @@ The reviewer sees only the final message you paste. Put everything the prompt or
 
 The final report must contain:
 
-1. A checklist of every requested item and where it lives (file or location).
+1. A checklist of every requested item and where it lives (file or location), plus the manual test table when there is one (What to test).
 2. The first failing test output from the stubs: assertion failures, not "cannot find module".
 3. The full code of new pure logic (services, `src/lib` functions), plus short snippets for anything the plan flagged.
 4. Side effects outside the repo: pushes, PRs, Docker containers, images, volumes, databases or ports you touched, including the user's own dev environment.
