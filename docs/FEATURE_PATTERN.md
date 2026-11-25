@@ -42,7 +42,7 @@ Every MVP feature copies `src/features/group/` (Create group). Keep the same fil
 - formState: FormData mapping (missing / File / extra keys), error → state, `fieldError` / `formError`.
 - Service, with `createTestDb()`: write then read back, trimming, invalid input inserts nothing, `NOT_FOUND`, malformed id, Unicode round-trip, a failing fake db → `UNEXPECTED` + logged. Uniqueness → `CONFLICT` (including a `Promise.all` race). Child rows: an id from another parent (another group) → `NOT_FOUND` when a row is loaded or changed by its id, or a field `VALIDATION` when an insert checks membership (expense payer/participants, settlement from/to); nothing is written or changed, with the exact same result as a missing id (full equality, not only the code).
 - Actions and pages stay thin enough to need no unit tests; cover them in the PR's manual test table. Exception: a production or security guard in a page (e.g. a dev-only route's `notFound()` in production) gets a unit test next to the page; see docs/decisions.md (`/dev/components` must 404 in production).
-- Tests first: show them failing for the right reason, then implement.
+- Tests first, for every change (features, fixes, hooks, scripts): write them before the implementation, show them failing on an assertion, then implement.
 
 ## E2E
 
@@ -62,6 +62,16 @@ There is no login, so the id in a URL is the only access control. Ids are UUID v
 - Every Server Action is a public POST: treat every FormData value, hidden ids included, as forged. Entry points (action, page, route handler) reach the DB only through services, passing them `getDb()`, as in Layers; besides that they may call pure helpers that never touch the DB (`readXForm`/`toXFormState`, `toBalanceView`). The one exception is /api/health's constant `SELECT 1` (no input, no user data).
 - The service checks every id with `idSchema` and scopes every read and write by `groupId` (`where: { id, groupId }`, or `findMany({ where: { groupId, id: { in: ids } } })` as a membership check before an insert). Never load or change a child row by its id alone (tested as in What to test › Service, child rows).
 
+## Plan
+
+Show the plan and wait for the user's OK before changing files (CLAUDE.md › Working Rules). Search existing code first (`src/lib/README.md`). The plan lists:
+
+- every file created or changed;
+- which of them are zoned (`.github/CODEOWNERS`), with the pattern each one matches;
+- the tests, and which one fails first and why;
+- E2E: added or extended, or "not needed" with the reason (E2E above);
+- risks.
+
 ## Final report
 
 The reviewer sees only the final message you paste. Put everything the prompt or plan asked them to see in that FINAL message, not only in mid-work updates.
@@ -73,7 +83,9 @@ The final report must contain:
 3. The full code of new pure logic (services, `src/lib` functions), plus short snippets for anything the plan flagged.
 4. Side effects outside the repo: pushes, PRs, Docker containers, images, volumes, databases or ports you touched, including the user's own dev environment.
 5. What you could NOT verify.
-6. `code-reviewer` findings. After committing, run `git fetch origin`, write `git diff --stat origin/main...HEAD` and `git diff origin/main...HEAD` to a file outside the repo (your scratchpad), and run the `code-reviewer` subagent with that path. Paste its findings verbatim (do not summarise or re-rank them), then, separately, what you did with each: fixed, or not fixed and why.
+6. `code-reviewer` findings. After committing, run `git fetch origin`, write `git diff --stat origin/main...HEAD` and `git diff origin/main...HEAD` to a file outside the repo (your scratchpad), and run the `code-reviewer` subagent with that path. Paste its findings verbatim (do not summarise or re-rank them), then, separately, what you did with each: fixed, or not fixed and why. After fixes, commit and run it again; stop re-running it when it raises only borderline points.
+
+PR body: the sections of `.github/pull_request_template.md`. Summary; How I checked = the live-check result (when the plan has one), then items 1–6, with the zoned files; Checklist, ticked only where true. Push and open the PR only when the user says so (CLAUDE.md › Git Workflow).
 
 For a new rule or safety check, show it can fail (mutation check): break the code on purpose, show the tests fail, undo it with an Edit, then show `git diff` is empty. Never undo with `git checkout` or `git restore`.
 
