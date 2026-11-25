@@ -27,8 +27,9 @@ const BROKEN = "const a = {\n";
 // root: a fake project using the repo's Prettier (node_modules symlink) and
 // config. bare: a project without node_modules. other: outside any root.
 // sibling: `<root>-other`, which a plain startsWith(root) would treat as inside.
-// plain: like root but with no ignore file or .git, so nothing stops a walk
-// up the folders except reaching root itself.
+// plain: like root but with no ignore files either (root has no .git), so a
+// walk up the folders stops only by reaching root itself, whichever marker
+// file (.git now, .prettierignore before) the hook looks for.
 const dirs = { root: "", bare: "", other: "", sibling: "", plain: "" };
 
 beforeAll(() => {
