@@ -7,6 +7,7 @@ import { removeMemberAction } from "./actions";
 import {
   initialRemoveMemberFormState,
   removeMemberFormError,
+  type RemoveMemberFormState,
 } from "./formState";
 
 type Props = { groupId: string; memberId: string; memberName: string };
@@ -19,7 +20,12 @@ export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
     removeMemberAction,
     initialRemoveMemberFormState(groupId, memberId),
   );
-  const error = removeMemberFormError(state);
+  // Same dismissal as AddMemberForm: the state the user closed the Modal on
+  // keeps its error hidden on reopen; a finished submit shows again.
+  const [dismissed, setDismissed] = useState<RemoveMemberFormState | null>(
+    null,
+  );
+  const error = state !== dismissed ? removeMemberFormError(state) : undefined;
 
   return (
     <>
@@ -37,7 +43,10 @@ export function RemoveMemberForm({ groupId, memberId, memberName }: Props) {
           long name goes in the body instead. */}
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setDismissed(state);
+        }}
         title="Remove member?"
         actions={
           // Outside the <form> (Modal footer), so tied to it with form={formId}.

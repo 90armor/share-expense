@@ -11,7 +11,11 @@ import { fieldError } from "@/lib/formState";
 import { AMOUNT_MAX_MINOR_UNITS, DESCRIPTION_MAX_LENGTH } from "@/lib/limits";
 import { formatAmount } from "@/lib/money";
 import { addExpenseAction } from "./actions";
-import { addExpenseFormError, initialAddExpenseFormState } from "./formState";
+import {
+  addExpenseFormError,
+  initialAddExpenseFormState,
+  type AddExpenseFormState,
+} from "./formState";
 
 type Props = {
   groupId: string;
@@ -37,7 +41,12 @@ export function AddExpenseForm({ groupId, currency, members }: Props) {
     setSeen(state);
     setOpen(state.error !== null);
   }
-  const topError = addExpenseFormError(state);
+  // Same dismissal as AddMemberForm: the state the user closed the Modal on
+  // keeps its errors hidden on reopen; a finished submit shows again. Only
+  // the errors: the defaults below still read state, so the draft is kept.
+  const [dismissed, setDismissed] = useState<AddExpenseFormState | null>(null);
+  const showErrors = state !== dismissed;
+  const topError = showErrors ? addExpenseFormError(state) : undefined;
   const options = members.map((member) => ({
     value: member.id,
     label: member.name,
@@ -53,7 +62,10 @@ export function AddExpenseForm({ groupId, currency, members }: Props) {
       <Button onClick={() => setOpen(true)}>Add expense</Button>
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setDismissed(state);
+        }}
         title="Add expense"
         actions={
           // Outside the <form> (Modal footer), so tied to it with form={formId}.
@@ -80,7 +92,7 @@ export function AddExpenseForm({ groupId, currency, members }: Props) {
             placeholder="1,000.00"
             hint={`Up to 2 decimal places, at most ${maxAmount}`}
             defaultValue={state.values.amount}
-            error={fieldError(state, "amount")}
+            error={showErrors ? fieldError(state, "amount") : undefined}
           />
           <Input
             label="Description (optional)"
@@ -90,14 +102,14 @@ export function AddExpenseForm({ groupId, currency, members }: Props) {
             maxLength={DESCRIPTION_MAX_LENGTH}
             hint={`Up to ${DESCRIPTION_MAX_LENGTH} characters`}
             defaultValue={state.values.description}
-            error={fieldError(state, "description")}
+            error={showErrors ? fieldError(state, "description") : undefined}
           />
           <RadioGroup
             label="Paid by"
             name="payerId"
             options={options}
             defaultValue={state.values.payerId}
-            error={fieldError(state, "payerId")}
+            error={showErrors ? fieldError(state, "payerId") : undefined}
           />
           <CheckboxGroup
             label="Shared by"
@@ -109,7 +121,7 @@ export function AddExpenseForm({ groupId, currency, members }: Props) {
                 : members.map((member) => member.id)
             }
             hint="Split equally between everyone checked."
-            error={fieldError(state, "participantIds")}
+            error={showErrors ? fieldError(state, "participantIds") : undefined}
           />
         </form>
       </Modal>

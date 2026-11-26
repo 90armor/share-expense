@@ -10,9 +10,9 @@ import {
 // Modal close/stay-open, drafts, double submits, keyboard, bigint amounts.
 // Each test creates its own group, so they run in parallel.
 //
-// Parked gaps are deliberately not encoded (docs/decisions.md): a stale
-// error alert after close + reopen, closing Remove/Mark as paid while pending,
-// and clicks before hydration (openDialog retries; waitForHydration).
+// Parked gaps are deliberately not encoded (docs/decisions.md): closing
+// Remove/Mark as paid while pending, and clicks before hydration (openDialog
+// retries; waitForHydration).
 test.describe.configure({ mode: "parallel" });
 
 async function createGroup(page: Page, name: string, currency = "USD") {
@@ -85,7 +85,17 @@ test("member Modals: a remove closes on success; a duplicate name and an in-use 
   await expect(addDialog).toBeVisible();
   await expect(addDialog.getByLabel("Member name")).toHaveValue("aung");
   await expect(members(page).getByRole("listitem")).toHaveCount(2);
-  // Not closed and reopened: the alert would still show (parked gap).
+  // Close + reopen: the old alert is gone, the typed name is kept.
+  await addDialog.getByRole("button", { name: "Close" }).click();
+  await expect(addDialog).toBeHidden();
+  await openAddMember(page);
+  await expect(addDialog.getByRole("alert")).toHaveCount(0);
+  await expect(addDialog.getByLabel("Member name")).toHaveValue("aung");
+  // A new submit is a new error: the alert is back.
+  await addDialog.getByRole("button", { name: "Add member" }).click();
+  await expect(addDialog.getByRole("alert")).toHaveText(
+    "Error: A member named “aung” is already in this group.",
+  );
   await addDialog.getByRole("button", { name: "Close" }).click();
 
   // Remove a member who pays for an expense (CONFLICT): stays open.
@@ -100,6 +110,15 @@ test("member Modals: a remove closes on success; a duplicate name and an in-use 
   );
   await expect(removeAung).toBeVisible();
   await expect(members(page).getByText("Aung", { exact: true })).toBeVisible();
+  // Close + reopen: the old alert is gone.
+  await removeAung.getByRole("button", { name: "Close" }).click();
+  await expect(removeAung).toBeHidden();
+  await openDialog(
+    page,
+    members(page).getByRole("button", { name: "Remove Aung" }),
+    "Remove member?",
+  );
+  await expect(removeAung.getByRole("alert")).toHaveCount(0);
   await removeAung.getByRole("button", { name: "Close" }).click();
 
   // Remove a member with no expenses: the dialog closes and the row goes.
@@ -326,13 +345,28 @@ test("an expense at the amount cap shows exact amounts and its line can be marke
     /Error: Amount must be at most 9,999,999,999\.99$/,
   );
   await expect(dialog).toBeVisible();
-  await expect(amount).toHaveValue("10,000,000,000");
-  await expect(dialog.getByLabel("Description (optional)")).toHaveValue("Cap");
-  await expect(paidBy.getByRole("radio", { name: "Aung" })).toBeChecked();
-  await expect(
-    sharedBy.getByRole("checkbox", { name: "Aung" }),
-  ).not.toBeChecked();
-  await expect(sharedBy.getByRole("checkbox", { name: "Bo Bo" })).toBeChecked();
+  const expectOverCapValues = async () => {
+    await expect(amount).toHaveValue("10,000,000,000");
+    await expect(dialog.getByLabel("Description (optional)")).toHaveValue(
+      "Cap",
+    );
+    await expect(paidBy.getByRole("radio", { name: "Aung" })).toBeChecked();
+    await expect(
+      sharedBy.getByRole("checkbox", { name: "Aung" }),
+    ).not.toBeChecked();
+    await expect(
+      sharedBy.getByRole("checkbox", { name: "Bo Bo" }),
+    ).toBeChecked();
+  };
+  await expectOverCapValues();
+
+  // Close + reopen: the old field error is gone, the values are kept.
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(dialog).toBeHidden();
+  await openAddExpense(page);
+  await expect(dialog.getByText(/^Error:/)).toHaveCount(0);
+  await expect(amount).not.toHaveAccessibleDescription(/Error:/);
+  await expectOverCapValues();
 
   // Exactly the cap: AMOUNT_MAX_MINOR_UNITS = 999_999_999_999n minor units
   // = MMK 9,999,999,999.99, paid by Aung, shared by Bo Bo only.
@@ -572,6 +606,20 @@ test("Mark as paid: a rejected settlement keeps the dialog open with the alert",
   await expect(dialog).toBeVisible();
   expect(actions.count).toBe(1);
   await unchanged();
+
+  // Close with Esc (the dialog's native close event) + reopen: the old alert
+  // is gone.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await openDialog(
+    page,
+    lines.getByRole("button", {
+      name: "Mark as paid: Bo Bo pays Aung USD 5.00",
+      exact: true,
+    }),
+    "Mark as paid?",
+  );
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
 
   // Server-rendered from the DB: no settlement was recorded.
   await page.reload();

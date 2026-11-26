@@ -7,7 +7,11 @@ import { Modal } from "@/components/Modal";
 import { fieldError } from "@/lib/formState";
 import { MEMBER_NAME_MAX_LENGTH } from "@/lib/limits";
 import { addMemberAction } from "./actions";
-import { addMemberFormError, initialAddMemberFormState } from "./formState";
+import {
+  addMemberFormError,
+  initialAddMemberFormState,
+  type AddMemberFormState,
+} from "./formState";
 
 /** "Add member" button + Modal with the form. Closes on success, (re)opens on error. */
 export function AddMemberForm({ groupId }: { groupId: string }) {
@@ -27,7 +31,11 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     setSeen(state);
     setOpen(state.error !== null);
   }
-  const topError = addMemberFormError(state);
+  // The state the user closed the Modal on: its errors stay hidden on reopen.
+  // A finished submit is a new object, so its errors show again.
+  const [dismissed, setDismissed] = useState<AddMemberFormState | null>(null);
+  const showErrors = state !== dismissed;
+  const topError = showErrors ? addMemberFormError(state) : undefined;
 
   // React resets uncontrolled fields after an action; defaultValue comes from
   // state.values, so a failed submit keeps the name and a success clears it.
@@ -39,7 +47,10 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       </Button>
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setDismissed(state);
+        }}
         title="Add member"
         actions={
           // Outside the <form> (Modal footer), so tied to it with form={formId}.
@@ -65,7 +76,7 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
             placeholder="Aung Aung"
             hint={`Up to ${MEMBER_NAME_MAX_LENGTH} characters`}
             defaultValue={state.values.name}
-            error={fieldError(state, "name")}
+            error={showErrors ? fieldError(state, "name") : undefined}
           />
         </form>
       </Modal>
