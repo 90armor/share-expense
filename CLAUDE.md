@@ -37,10 +37,10 @@ Share Expense — group အသုံးစရိတ် မျှဝေမှု 
 
 ## Git Workflow
 
-- `main` ကို တိုက်ရိုက် push/commit မလုပ်ရ။
-- Branch ဆောက်ပြီး PR ဖြင့်သာ merge လုပ်ရမယ် — branch prefix: `feat/` | `fix/` | `chore/`။
+- `main` ကို တိုက်ရိုက် push/commit မလုပ်ရ။ Push နဲ့ PR ဖွင့်ခြင်းကို user ပြောမှသာ `git push -u origin <branch>` (refspec အပြည့်) ဖြင့်လုပ်ပါ။
+- Branch ကို `git switch --no-track -c <prefix>/<name> origin/main` ဖြင့်ဆောက်ပါ (`git config branch.<prefix>/<name>.merge` ဗလာဖြစ်ရမယ်)၊ PR ဖြင့်သာ merge လုပ်ရမယ် — prefix: `feat/` | `fix/` | `chore/`။
 - Feature/fix တစ်ခု = branch တစ်ခု = PR တစ်ခု၊ PR ကို သေးသေးထားပါ။
-- Commit message prefix: `feat:` / `fix:` / `chore:`၊ တိုတို ရှင်းလင်းစွာ ရေးပါ။
+- Commit message prefix: `feat:` / `fix:` / `chore:`၊ တိုတို ရှင်းလင်းစွာ ရေးပါ။ PR title က squash commit ဖြစ်လာလို့ PR တစ်ခုလုံးကို ဖော်ပြတဲ့ prefix ပါ တစ်ကြောင်းဖြစ်ရမယ်။
 
 ## Working Rules
 

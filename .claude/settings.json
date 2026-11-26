@@ -8,6 +8,7 @@
       "Read(./.env.test)",
       "Read(./.env.*.local)"
     ],
+    "ask": ["Bash(git push *)", "Bash(gh pr create *)"],
     "allow": [
       "Bash(git status:*)",
       "Bash(git diff:*)",
