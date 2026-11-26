@@ -10,6 +10,7 @@ import {
   initialSettleFormState,
   settleFormError,
   toAmountFieldValue,
+  type SettleFormState,
 } from "./formState";
 
 type Props = { groupId: string; from: Member; to: Member; amount: Money };
@@ -38,7 +39,10 @@ export function SettleForm({ groupId, from, to, amount }: Props) {
     setSeen(state);
     if (state.error === null) setOpen(false);
   }
-  const error = settleFormError(state);
+  // Same dismissal as AddMemberForm: the state the user closed the Modal on
+  // keeps its error hidden on reopen; a finished submit shows again.
+  const [dismissed, setDismissed] = useState<SettleFormState | null>(null);
+  const error = state !== dismissed ? settleFormError(state) : undefined;
   const line = `${from.name} pays ${to.name} ${formatMoney(amount)}`;
 
   return (
@@ -54,7 +58,10 @@ export function SettleForm({ groupId, from, to, amount }: Props) {
           long names go in the body instead. */}
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setDismissed(state);
+        }}
         title="Mark as paid?"
         actions={
           // Outside the <form> (Modal footer), so tied to it with form={formId}.
