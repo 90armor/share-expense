@@ -119,6 +119,11 @@ test("member Modals: a remove closes on success; a duplicate name and an in-use 
     "Remove member?",
   );
   await expect(removeAung.getByRole("alert")).toHaveCount(0);
+  // A new submit is a new error: the alert is back.
+  await removeAung.getByRole("button", { name: "Remove member" }).click();
+  await expect(removeAung.getByRole("alert")).toHaveText(
+    "Error: This member paid for or shares an expense and can't be removed.",
+  );
   await removeAung.getByRole("button", { name: "Close" }).click();
 
   // Remove a member with no expenses: the dialog closes and the row goes.
@@ -366,6 +371,12 @@ test("an expense at the amount cap shows exact amounts and its line can be marke
   await openAddExpense(page);
   await expect(dialog.getByText(/^Error:/)).toHaveCount(0);
   await expect(amount).not.toHaveAccessibleDescription(/Error:/);
+  await expectOverCapValues();
+  // A new submit is a new error: the field error is back.
+  await dialog.getByRole("button", { name: "Add expense" }).click();
+  await expect(amount).toHaveAccessibleDescription(
+    /Error: Amount must be at most 9,999,999,999\.99$/,
+  );
   await expectOverCapValues();
 
   // Exactly the cap: AMOUNT_MAX_MINOR_UNITS = 999_999_999_999n minor units
@@ -620,6 +631,20 @@ test("Mark as paid: a rejected settlement keeps the dialog open with the alert",
     "Mark as paid?",
   );
   await expect(dialog.getByRole("alert")).toHaveCount(0);
+  // A new submit is a new error: the alert is back. The amount is forced to
+  // 0 again, so the result doesn't depend on whether the form reset after
+  // the first error restored the hidden value.
+  await dialog
+    .locator('input[name="amount"]')
+    .evaluate((input: HTMLInputElement) => {
+      input.value = "0";
+    });
+  await dialog
+    .getByRole("button", { name: "Mark as paid", exact: true })
+    .click();
+  await expect(alert).toContainText("Amount must be more than 0");
+  expect(actions.count).toBe(2);
+  await unchanged();
 
   // Server-rendered from the DB: no settlement was recorded.
   await page.reload();
